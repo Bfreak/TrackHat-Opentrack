@@ -2,6 +2,12 @@
 
 Read this first, then `CLAUDE.md`. Everything below is the true state at the end of the last session.
 
+## Branch `trackhat-mediapipe-prototype` (2026-11-13, cloud session)
+Experimental: a second tracking model (MediaPipe face mesh) next to the neural net, chosen in Options > Tracker >
+Tracking model. Read `docs/trackhat/MEDIAPIPE-PROTOTYPE.md` for what it does, what was measured and what was not.
+Built and run on Linux with recorded video only: **no sensor, no infrared image, no Windows run yet.** Do not merge
+into `trackhat-2026.1` before the owner has tried it with the sensor. Everything below describes `trackhat-2026.1`.
+
 ## Goal
 Trackhat's custom OpenTrack, rebuilt on OpenTrack 2026.1.0 and released as **Trackhat OpenTrack 3.3**.
 The owner (James) is not a C++ developer: Claude builds, tests and hands back something runnable.

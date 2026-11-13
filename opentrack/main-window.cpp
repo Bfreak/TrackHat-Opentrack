@@ -79,6 +79,39 @@ main_window::main_window() : State(OPENTRACK_BASE_PATH + OPENTRACK_LIBRARY_PATH)
     if (qEnvironmentVariableIsSet("OPENTRACK_HEAD_TEST_SNAPSHOT"))
         QTimer::singleShot(300, this, &main_window::show_head_test_window);
 
+    // Trackhat: OPENTRACK_VIDEO_FILE=<file> makes the tracker play a video file instead of the camera
+    // (development aid, see docs/trackhat/MEDIAPIPE-PROTOTYPE.md). Tracking then starts by itself.
+    // OPENTRACK_VIDEO_FILE_SNAPSHOT=<dir> also saves the main window with the video preview every 2 s.
+    if (qEnvironmentVariableIsSet("OPENTRACK_VIDEO_FILE") && !qEnvironmentVariableIsSet("OPENTRACK_UI_SNAPSHOT"))
+    {
+        QTimer::singleShot(500, this, [this] {
+            start_tracker_();
+            const QString dir = qEnvironmentVariable("OPENTRACK_VIDEO_FILE_SNAPSHOT");
+            if (dir.isEmpty() || !work)
+                return;
+            QDir().mkpath(dir);
+            ui.preview_checkbox->setChecked(true);
+            auto* timer = new QTimer(this);
+            connect(timer, &QTimer::timeout, this, [this, dir, n = 0]() mutable {
+                if (work)
+                    grab().save(QDir(dir).filePath(QStringLiteral("frame-%1.png").arg(n++, 3, 10, QChar('0'))));
+            });
+            timer->start(2000);
+
+            // OPENTRACK_VIDEO_FILE_SWITCH_MODEL=1: change the tracking model in the options every 6 s.
+            if (!qEnvironmentVariableIsSet("OPENTRACK_VIDEO_FILE_SWITCH_MODEL"))
+                return;
+            show_options_dialog(true);
+            auto* switch_timer = new QTimer(this);
+            connect(switch_timer, &QTimer::timeout, this, [this] {
+                auto* cb = options_widget ? options_widget->findChild<QComboBox*>(QStringLiteral("pose_backend")) : nullptr;
+                if (cb && cb->count() > 1)
+                    cb->setCurrentIndex((cb->currentIndex() + 1) % cb->count());
+            });
+            switch_timer->start(6000);
+        });
+    }
+
     // Trackhat: UI screenshot mode for theme work (development aid):
     // OPENTRACK_UI_SNAPSHOT=<dir> saves the main, Options, Mapping and test windows, then quits.
     if (const QString dir = qEnvironmentVariable("OPENTRACK_UI_SNAPSHOT"); !dir.isEmpty())

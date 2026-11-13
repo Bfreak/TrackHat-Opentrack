@@ -12,6 +12,7 @@
 #include "cv/video-widget.hpp"
 
 #include <optional>
+#include <vector>
 
 #include <opencv2/core.hpp>
 #include <opencv2/imgproc.hpp>
@@ -39,6 +40,8 @@ public:
                      const std::optional<cv::Rect2f>& last_roi,
                      const std::optional<cv::Rect2f>& last_localizer_roi,
                      const cv::Point2f& neckjoint_position);
+    // Face mesh landmarks, in camera image coordinates
+    void draw_landmarks(const std::vector<cv::Point2f>& landmarks);
     void overlay_netinput(const cv::Mat& netinput);
     void draw_fps(double fps, double last_inference_time);
     void copy_to_widget(cv_video_widget& widget);

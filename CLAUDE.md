@@ -13,6 +13,8 @@ and hand back something runnable. Prefer finished, tested artifacts over explana
 4. `docs/trackhat/LINUX-BUILD.md`: Linux build + headless smoke test.
 5. `docs/trackhat/CHANGELOG.md`: user-facing changelog, old Trackhat 3.2 -> this port.
 6. `docs/trackhat/GITHUB-AND-ENVIRONMENT.md`: GitHub/fork situation and sandbox constraints.
+7. `docs/trackhat/MEDIAPIPE-PROTOTYPE.md`: the experimental MediaPipe tracking model (branch
+   `trackhat-mediapipe-prototype` only) and the video-file / pose-log test hooks that let the tracker run without a camera.
 
 ## What makes this a "Trackhat" build (don't undo)
 - `cmake/opentrack-variant.cmake`: Trackhat-only module list, ident `trackhat-v3`
