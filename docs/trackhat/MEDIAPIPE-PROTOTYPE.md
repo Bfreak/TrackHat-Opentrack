@@ -67,16 +67,45 @@ The tracker converts everything to greyscale, so both models saw greyscale image
 - Also checked: the unit test for the model fit passes at start-up; switching models while tracking works;
   the Tracker tab shows the new setting (UI snapshot).
 
+## Sensor V2 clip (2026-11-14)
+The owner supplied `SensorV2TestTrackingVIdeo.mp4`, filmed with the sensor: infrared, 640x480, about 58 fps,
+1641 frames (28 s), one person with headphones turning, nodding, tilting and leaning in and out, with the
+brightness changing. Not in the repo. Both models ran on it through the app (same cloud machine as above).
+
+![Yaw, pitch and roll from both models on the sensor clip](mediapipe-sensor-v2-angles.png)
+
+| | Neural net, internal filter on | Neural net, filter off | MediaPipe |
+|---|---|---|---|
+| Frames tracked | 1641 / 1641 | 1641 / 1641 | 1641 / 1641 |
+| Time per frame, mean / 99th percentile | 4.5 / 7.8 ms | 4.5 / 7.7 ms | 11.5 / 15.6 ms |
+| Frames slower than the 17.3 ms frame time | 0 | 3 | 10 |
+| Wobble, yaw / pitch / roll (deg) | 0.14 / 0.21 / 0.10 | 0.24 / 0.37 / 0.17 | 0.25 / 0.37 / 0.17 |
+
+- "Wobble" is what is left of the output after a 9-frame smoothing curve is subtracted (RMS over the clip). The
+  four half-second stretches where the head was still give the same picture.
+- **Raw steadiness is the same.** The neural net is only steadier with its internal filter, which MediaPipe
+  cannot use yet.
+- **Yaw and roll agree** (MediaPipe = 1.01x and 0.99x the neural net; typical difference 0.6 and 0.5 deg).
+- **Pitch does not agree:** MediaPipe reports 1.32x the neural net's pitch (nod up 20 deg against 14, nod down
+  -38 against -30). Google's own MediaPipe pose solver, run on the same frames in Python, gives a pitch span of
+  60 deg, like the prototype's 60 and unlike the neural net's 45. There is no ground truth in the clip, so which
+  is right is open; a clip with a known nod angle would settle it.
+- Position agrees to 0.2 cm sideways, 0.4 cm up/down and 0.6 cm in depth (typical); MediaPipe reads depth 5% shorter.
+- MediaPipe's face-presence score stayed high for the whole clip, and the landmarks match Google's Python
+  package to 0.5 px on these infrared frames.
+- The clip has yaw up to 40 deg, no glasses, no profile views, no face covering and one person.
+
 ## Not verified
-- **Nothing ran on the TrackHat sensor or any infrared image.** The model card says the model was trained on
-  smartphone camera images; it does not mention infrared. The darkened clip is not a substitute.
+- **Live use with the sensor.** One recorded sensor clip was tested (above); nothing ran with the sensor attached.
+  The model card says the model was trained on smartphone camera images and does not mention infrared.
+- Glasses, yaw beyond 40 deg, other people, other rooms and lighting.
 - Windows: not built or run. CI builds this branch (`trackhat-*`); the MSVC result is unknown until it runs.
 - 60 fps behaviour, CPU load on the owner's PC, and how it feels in a game.
 - Head centre and size constants were fitted on the three clips above (about 2500 frames), not on the sensor.
 
 ## Next steps
 1. Owner: install the CI build, switch the Tracking model while tracking with the sensor, compare.
-2. Record sensor clips (near / medium / far, with and without glasses) and run both models on them with
-   the environment variables above. That is the real test for infrared.
+2. More sensor clips: with glasses, turning further than 40 deg, and one with a known nod angle to settle
+   the pitch question.
 3. If it is worth keeping: landmark smoothing (MediaPipe uses a one-euro filter) or an uncertainty estimate so
    the internal filter works, and a look at the cost per frame (2 threads, or the smaller 192x192 model).
