@@ -6,7 +6,10 @@ Read this first, then `CLAUDE.md`. Everything below is the true state at the end
 Experimental: a second tracking model (MediaPipe face mesh) next to the neural net, chosen in Options > Tracker >
 Tracking model. Read `docs/trackhat/MEDIAPIPE-PROTOTYPE.md` for what it does, what was measured and what was not.
 Built and run on Linux with recorded video only, including one infrared clip from the Sensor V2 (2026-11-14: both
-models tracked every frame; they disagree on pitch by a factor of 1.3). **No live sensor, no Windows run yet.** Do not merge
+models tracked every frame; they disagree on pitch by a factor of 1.3). A MinGW portable zip of this branch was
+built on 2026-11-14 and given to the owner for testing (`WINDOWS-BUILD.md`, last section); it ran both models on the
+sensor clip under Wine. **No live sensor and no real Windows run yet.** The branch is not on GitHub: pushes from the
+cloud session were refused (no write access), so there is no CI build of it. Do not merge
 into `trackhat-2026.1` before the owner has tried it with the sensor. Everything below describes `trackhat-2026.1`.
 
 ## Goal

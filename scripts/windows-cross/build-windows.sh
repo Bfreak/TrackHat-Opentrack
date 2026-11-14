@@ -23,6 +23,8 @@ cmake --install "$WORK/build-win" --prefix "$WORK/install-win"
 G=/usr/lib/gcc/x86_64-w64-mingw32/13-posix
 for l in libgcc_s_seh-1 libstdc++-6 libgomp-1; do cp "$G/$l.dll" "$WORK/install-win/"; cp "$G/$l.dll" "$WORK/install-win/modules/"; done
 cp /usr/x86_64-w64-mingw32/lib/libwinpthread-1.dll "$WORK/install-win/"; cp /usr/x86_64-w64-mingw32/lib/libwinpthread-1.dll "$WORK/install-win/modules/"
+# The tracker loads onnxruntime.dll from modules/ (OPENTRACK_LIBRARY_PATH); the install rule puts it next to the exe.
+cp "$WORK/install-win/onnxruntime.dll" "$WORK/install-win/modules/"
 Q=$WORK/qt/6.8.3/mingw_64/plugins
 mkdir -p "$WORK/install-win"/{tls,imageformats,styles}
 cp "$Q"/tls/qschannelbackend.dll "$WORK/install-win/tls/"
