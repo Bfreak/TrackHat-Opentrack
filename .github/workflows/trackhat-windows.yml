@@ -3,7 +3,8 @@ name: Trackhat Windows (MSVC)
 # Builds the Trackhat OpenTrack variant with MSVC, then produces:
 #   - a portable zip of the install tree
 #   - an Inno Setup installer (installer/opentrack-installer.iss)
-# Both are uploaded as workflow artifacts.
+# Both are uploaded as workflow artifacts. Run it manually (workflow_dispatch) with
+# release_tag set to also attach both files to that GitHub release.
 
 on:
   push:
@@ -11,6 +12,14 @@ on:
     tags: [ 'trackhat-*' ]
   pull_request:
   workflow_dispatch:
+    inputs:
+      release_tag:
+        description: 'Attach the installer and portable zip to the GitHub release with this tag (leave empty to skip)'
+        required: false
+        default: ''
+
+permissions:
+  contents: write   # needed only by the "Attach to release" step
 
 env:
   BUILD_TYPE: Release
@@ -220,3 +229,11 @@ jobs:
       with:
         name: ${{ steps.ver.outputs.version }}-portable
         path: dist/*.zip
+
+    - name: Attach to release
+      if: github.event_name == 'workflow_dispatch' && inputs.release_tag != ''
+      shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
+        RELEASE_TAG: ${{ inputs.release_tag }}
+      run: gh release upload "$RELEASE_TAG" dist/*.exe dist/*.zip --clobber -R "$GITHUB_REPOSITORY"
