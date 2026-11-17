@@ -1,17 +1,32 @@
 # GitHub situation and sandbox constraints
 
-## Fork (the open item)
-- Goal: user's own GitHub fork of `opentrack/opentrack` holding branch `trackhat-2026.1`.
-- The Claude sandbox's GitHub access is a **repo-scoped allowlist** managed by the session proxy:
-  - public repos can be cloned (git reads);
-  - API archive/zip downloads of repos not attached to the session return 403;
-  - repo creation / fork API paths (`POST /repos/.../forks`) are denied ("Write access to this GitHub API path is not permitted");
-  - the in-sandbox GitHub token is a placeholder; real access only comes via the `add_repo` tool for specific repos.
-- Workable path: the owner forks once in the GitHub UI (or creates an empty repo), then a Claude session attaches it with
-  `add_repo` (access = push) and pushes. In Claude Code on the owner's machine none of this applies: just
-  `git remote add fork <url> && git push fork trackhat-2026.1`.
+## Repository layout (github.com/Bfreak/opentrack)
+A fork of `opentrack/opentrack`, used one way only: we pull upstream releases in when we decide to; nothing
+ever goes back upstream (no pushes, no PRs).
+
+| Branch | Role |
+|---|---|
+| `trackhat-2026.1` (default) | The Trackhat release branch. All releases are tagged from here. |
+| `master` | Untouched mirror of upstream `master`. Never commit to it; only "Sync fork" / fast-forward. |
+| `trackhat-<name>-prototype` | Experiments (currently `trackhat-mediapipe-prototype`). Merge `trackhat-2026.1` in to stay current; land via PR into `trackhat-2026.1`. |
+
+- Tags: `trackhat-opentrack-<version>` for Trackhat releases. Keep upstream's `opentrack-2026.1.0`: it is the
+  base of `trackhat-2026.1` and `git describe` needs it for the version string.
+- Taking a new opentrack: merge the upstream release *tag* (not upstream `master`) into the Trackhat branch.
+- CI: "Trackhat Windows (MSVC)" builds pushes to `trackhat-*` branches and PRs. To attach the installer and zip to a
+  release, run it manually with `release_tag`. Upstream's "CMake" workflow is disabled in the Actions UI (it lives
+  unchanged on `master`, so it can't be edited there).
+
+## Local clone conventions
+- `origin` = `Bfreak/opentrack` (push here); `upstream` = `opentrack/opentrack` with push URL `DISABLED`.
+- `gh` default repo is the fork (`remote.origin.gh-resolved=base`), so `gh pr create` never targets upstream.
+- New clone: `git clone https://github.com/Bfreak/opentrack.git`, then
+  `git remote add upstream https://github.com/opentrack/opentrack.git && git remote set-url --push upstream DISABLED`
+  and `gh repo set-default Bfreak/opentrack`.
+
+## Cloud sandbox (only if a session runs there)
+- GitHub access is a repo-scoped allowlist via the session proxy; attach `Bfreak/opentrack` with `add_repo`.
 - Don't try to bypass the proxy policy (curl with tokens, alternate hosts). Report the denial instead.
-- A thin git bundle of the Trackhat commits is provided: `trackhat-2026.1.bundle` (needs upstream's `opentrack-2026.1.0` tag; see handoff `README.md`).
 
 ## Sandbox facts (cloud Linux, only relevant if you resume there)
 - Network from the shell is an allowlist (package registries + GitHub via proxy); other sites are refused.
