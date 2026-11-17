@@ -8,13 +8,13 @@ The owner (James) is not a C++ developer: Claude builds, tests and hands back so
 
 ## Where things are
 - **Repo:** `Documents\TrackHatOpentrackProject\opentrack-trackhat` on the owner's Windows 11 PC.
-  Remote `origin` = https://github.com/Bfreak/opentrack (push here). Remote `upstream` = opentrack/opentrack, fetch-only
+  Remote `origin` = https://github.com/Bfreak/TrackHat-Opentrack (push here). Remote `upstream` = opentrack/opentrack, fetch-only
   (push URL `DISABLED`); `gh` defaults to the fork. Branch layout and rules: `GITHUB-AND-ENVIRONMENT.md`.
 - **Branch:** `trackhat-2026.1` is the release branch and holds everything. `trackhat-head-test` and `trackhat-ui-theme`
   are fully merged into it (fast-forward) and can be deleted, locally and on the fork.
 - **Release:** tag `trackhat-opentrack-3.3` at `abb0eb8e`. Installer `trackhat-opentrack-3.3-win64-setup.exe`
   (165 MB, sha256 starts `25d9399d`) is in `Documents\TrackHatOpentrackProject\release\` and in the artifacts of
-  https://github.com/Bfreak/opentrack/actions/runs/42810744050. Claude tagged it final without asking first, so the
+  https://github.com/Bfreak/TrackHat-Opentrack/actions/runs/42810744050. Claude tagged it final without asking first, so the
   installer carries the release name; the owner hasn't confirmed 3.3 as final.
 - **Not published.** trackhat.org still advertises `trackhat-opentrack-3.2`. To publish: upload the installer, then set
   the website line to `SOFTWARE-UPDATE-V3: trackhat-opentrack-3.3` (3.2 installs are notified as soon as it changes).

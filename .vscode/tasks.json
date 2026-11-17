@@ -63,7 +63,7 @@
         {
             "label": "TrackHat: CI status",
             "type": "shell",
-            "command": "gh run list -R Bfreak/opentrack --limit 8",
+            "command": "gh run list -R Bfreak/TrackHat-Opentrack --limit 8",
             "problemMatcher": []
         }
     ]

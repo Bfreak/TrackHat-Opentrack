@@ -1,6 +1,6 @@
 # GitHub situation and sandbox constraints
 
-## Repository layout (github.com/Bfreak/opentrack)
+## Repository layout (github.com/Bfreak/TrackHat-Opentrack)
 A fork of `opentrack/opentrack`, used one way only: we pull upstream releases in when we decide to; nothing
 ever goes back upstream (no pushes, no PRs).
 
@@ -19,14 +19,14 @@ ever goes back upstream (no pushes, no PRs).
   unchanged on `master`, so it can't be edited there).
 
 ## Local clone conventions
-- `origin` = `Bfreak/opentrack` (push here); `upstream` = `opentrack/opentrack` with push URL `DISABLED`.
+- `origin` = `Bfreak/TrackHat-Opentrack` (push here); `upstream` = `opentrack/opentrack` with push URL `DISABLED`.
 - `gh` default repo is the fork (`remote.origin.gh-resolved=base`), so `gh pr create` never targets upstream.
-- New clone: `git clone https://github.com/Bfreak/opentrack.git`, then
+- New clone: `git clone https://github.com/Bfreak/TrackHat-Opentrack.git`, then
   `git remote add upstream https://github.com/opentrack/opentrack.git && git remote set-url --push upstream DISABLED`
-  and `gh repo set-default Bfreak/opentrack`.
+  and `gh repo set-default Bfreak/TrackHat-Opentrack`.
 
 ## Cloud sandbox (only if a session runs there)
-- GitHub access is a repo-scoped allowlist via the session proxy; attach `Bfreak/opentrack` with `add_repo`.
+- GitHub access is a repo-scoped allowlist via the session proxy; attach `Bfreak/TrackHat-Opentrack` with `add_repo`.
 - Don't try to bypass the proxy policy (curl with tokens, alternate hosts). Report the denial instead.
 
 ## Sandbox facts (cloud Linux, only relevant if you resume there)
