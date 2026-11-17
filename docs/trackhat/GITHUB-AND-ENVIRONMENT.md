@@ -13,7 +13,8 @@ ever goes back upstream (no pushes, no PRs).
 - Tags: `trackhat-opentrack-<version>` for Trackhat releases. Keep upstream's `opentrack-2026.1.0`: it is the
   base of `trackhat-2026.1` and `git describe` needs it for the version string.
 - Taking a new opentrack: merge the upstream release *tag* (not upstream `master`) into the Trackhat branch.
-- CI: "Trackhat Windows (MSVC)" builds pushes to `trackhat-*` branches and PRs. To attach the installer and zip to a
+- CI: "Trackhat Windows (MSVC)" builds pushes to `trackhat-*` branches once each (PRs from
+  branches in this repo are skipped, since their push already built them; PRs from other forks still build). To attach the installer and zip to a
   release, run it manually with `release_tag`. Upstream's "CMake" workflow is disabled in the Actions UI (it lives
   unchanged on `master`, so it can't be edited there).
 

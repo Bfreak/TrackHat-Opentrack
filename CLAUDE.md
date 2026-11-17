@@ -71,7 +71,8 @@ and hand back something runnable. Prefer finished, tested artifacts over explana
   Write/Edit tools or a script file.
 
 ## Windows builds now come from CI
-- Push to `fork` (https://github.com/Bfreak/opentrack), branch `trackhat-2026.1`. The workflow
+- Push to `origin` (https://github.com/Bfreak/opentrack), branch `trackhat-2026.1`. `upstream` is
+  opentrack/opentrack, fetch-only (push URL `DISABLED`); never push or open PRs there. The workflow
   `Trackhat Windows (MSVC)` uploads the installer and a portable zip as artifacts
   (`gh run list -R Bfreak/opentrack`, `gh run download <id> -R Bfreak/opentrack`).
 - This machine is the owner's Windows 11 PC. It has `gh` signed in as `Bfreak`, VS 2022 Build Tools
