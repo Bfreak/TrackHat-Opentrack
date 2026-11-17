@@ -30,6 +30,8 @@ env:
 
 jobs:
   windows-msvc:
+    # A PR from a branch in this repo was already built by its push; only build PRs from other forks.
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository
     runs-on: windows-2022
     steps:
     - name: Checkout

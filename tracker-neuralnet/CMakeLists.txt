@@ -52,7 +52,10 @@ if(OpenCV_FOUND AND ONNXRuntime_FOUND AND OpenMP_FOUND)
 
     if(WIN32)
         if(NOT opentrack-use-onnxruntime-avx-dispatch)
-            otr_install_lib("${ONNXRuntime_RUNTIME}" ".")
+            # Trackhat: env.cpp loads onnxruntime.dll from the modules directory (ORT_API_MANUAL_INIT),
+            # and nothing imports it statically, so install it there. Upstream installed it next to the
+            # exe, where the tracker never looked, and aborted on start.
+            otr_install_lib("${ONNXRuntime_RUNTIME}" "${opentrack-libexec}")
         endif()
     endif()
     if(MSVC)

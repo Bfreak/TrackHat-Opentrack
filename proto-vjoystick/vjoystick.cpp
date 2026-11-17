@@ -24,7 +24,51 @@
 #include <public.h>
 #include <vjoyinterface.h>
 
+#include <QDir>
+#include <QSettings>
+
 #define OPENTRACK_VJOYSTICK_ID 1
+
+// Trackhat: vJoyInterface.dll has to match the installed vJoy driver. The SDK's copy that used to be
+// shipped in modules/ corrupts the heap with driver 2.1.9.1, and this protocol is enabled by default.
+// With MSVC the DLL is delay-loaded (see CMakeLists.txt), so load the driver's own copy before the first
+// vJoy call. If there is none, no vJoy function may be called.
+static bool load_vjoy_interface()
+{
+#ifdef _MSC_VER
+    static const bool loaded = [] {
+        if (GetModuleHandleW(L"vJoyInterface.dll"))
+            return true;
+
+        QStringList dirs;
+        // The vJoy installer (Inno Setup) records where it installed to.
+        const QSettings reg(QStringLiteral("HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\"
+                                           "{8E31F76F-74C3-47F1-9550-E041EEDC5FBB}_is1"),
+                            QSettings::Registry64Format);
+        if (const QString dir = reg.value(QStringLiteral("InstallLocation")).toString(); !dir.isEmpty())
+            dirs << dir;
+        for (const char* var : { "ProgramW6432", "ProgramFiles" })
+            if (const QString pf = qEnvironmentVariable(var); !pf.isEmpty())
+                dirs << pf + QStringLiteral("/vJoy");
+
+        const QString arch = sizeof(void*) == 8 ? QStringLiteral("x64") : QStringLiteral("x86");
+        for (const QString& dir : dirs)
+        {
+            const QString path = QDir::toNativeSeparators(QDir(dir).filePath(arch + QStringLiteral("/vJoyInterface.dll")));
+            if (LoadLibraryExW((const wchar_t*)path.utf16(), nullptr, LOAD_WITH_ALTERED_SEARCH_PATH))
+            {
+                qDebug() << "vjoystick: using" << path;
+                return true;
+            }
+        }
+        qDebug() << "vjoystick: no vJoyInterface.dll from an installed vJoy driver";
+        return false;
+    }();
+    return loaded;
+#else
+    return true; // linked normally, shipped next to the module
+#endif
+}
 
 const unsigned char vjoystick::axis_ids[6] =
 {
@@ -102,7 +146,7 @@ module_status vjoystick::initialize()
 {
     QString msg;
 
-    if (!vJoyEnabled())
+    if (!load_vjoy_interface() || !vJoyEnabled())
         msg = tr("vjoystick won't work without the driver installed.");
 #if 0
     else if (WORD VerDll, VerDrv; !DriverMatch(&VerDll, &VerDrv))
@@ -151,7 +195,8 @@ void vjoystick::pose(const double *pose, const double*)
 {
     if (first_run)
     {
-        status = init();
+        // Trackhat: only when initialize() succeeded; without the driver's DLL a vJoy call would crash.
+        status = status && init();
         //status &= !!ResetVJD(OPENTRACK_VJOYSTICK_ID);
         first_run = false;
     }
