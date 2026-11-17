@@ -12,6 +12,9 @@ Run as a **non-root** user. Headless GUI smoke test:
     Xvfb :99 -screen 0 1280x800x24 &
     DISPLAY=:99 <install>/bin/opentrack      # screenshot with `import -window root shot.png`
 
-Verified: window opens in Trackhat compact mode, settings persist (`~/.config/trackhat-v3`), NN models load,
+Re-verified 2026-11-16 on Ubuntu 24.04 (Qt 6.4.2): builds with every Trackhat module (head-test, multi-protocol,
+new pose preview); `OPENTRACK_UI_SNAPSHOT` and the test window work under Xvfb. Default flags use `-march=native`:
+not for distribution (see `LINUX-MACOS-PLAN.md`).
+Verified earlier: window opens in Trackhat compact mode, settings persist (`~/.config/trackhat-v3`), NN models load,
 upstream NN unit tests pass. Not verified: real camera.
 Release-build gotcha already fixed on the branch: `env.cpp` QFunctionPointer->void* error (upstream fix `f93040e6` and friends).

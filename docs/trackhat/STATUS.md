@@ -100,7 +100,8 @@ owner whether to move the `3.3` tag or tag `3.3.1`.
 - The camera swap was not watched in the video preview (the Options window covers the main window during the self-test,
   so the preview isn't updated); the owner hasn't tried it.
 - The camera list without the sensor plugged in ("Default (first camera)").
-- Performance of the test window on integrated graphics; machines without OpenGL 3.3; the Linux build of the new modules.
+- Performance of the test window on integrated graphics; machines without OpenGL 3.3. Linux: the 2026-11-16 build ran only
+  headless (no camera, no Wine/X-Plane outputs built). macOS: never built.
 
 ## Known rough edges (noticed, not fixed)
 - Pose preview, front view: the eye sockets read as one dark band across the face.
@@ -113,7 +114,8 @@ owner whether to move the `3.3` tag or tag `3.3.1`.
 - GitHub downloads and pushes were flaky at times ("Could not resolve host"); retrying worked.
 
 ## Later ideas
-- Linux CI job; upstream commits not taken (DBus, V4L2 ioctl workaround, OpenCV 5 fixes).
+- Linux and macOS builds: assessed and planned in `LINUX-MACOS-PLAN.md` (Linux: do it; macOS: owner decides).
+- Upstream commits not taken (DBus, V4L2 ioctl workaround, OpenCV 5 fixes).
 - Apply protocol changes without restarting tracking.
 
 ## History
@@ -122,3 +124,5 @@ owner whether to move the `3.3` tag or tag `3.3.1`.
 - 2026-11-10: all-protocols output, Protocols tab, new pose preview; merged; tagged `3.3`; installer built.
 - 2026-11-11: owner listed four fixes (above); interrupted before work started.
 - 2026-11-12: status rewritten; VS Code workflow set up. Owner's seven fixes done (above), built and self-tested; not committed.
+- 2026-11-16 (cloud session): Linux build of the current branch verified (Ubuntu 24.04, Qt 6.4.2, ORT 1.17.3; UI and test-window
+  snapshots under Xvfb look right). Linux/macOS viability and plan written: `LINUX-MACOS-PLAN.md`.
