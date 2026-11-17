@@ -9,7 +9,6 @@ name: Trackhat Windows (MSVC)
 on:
   push:
     branches: [ 'trackhat-*' ]
-    tags: [ 'trackhat-*' ]
   pull_request:
   workflow_dispatch:
     inputs:
