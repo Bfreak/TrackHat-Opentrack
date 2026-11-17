@@ -52,6 +52,12 @@ The branch was merged (real 3-way merge, history preserved) into the 2026.1.0 re
   names are macros in `<windows.h>`). Numeric values are unchanged, so saved profiles stay valid.
 - ps3eye submodule and MSVC `sdk-paths-*` files use upstream's versions (not used by the TrackHat build).
 - `todo.md` and the personal todo commits were not carried over.
+- **Windows runtime DLLs (2026-11-17)**: the 2026.1 beta crashed on Start.
+  - `onnxruntime.dll` is installed into `modules\` (`tracker-neuralnet/CMakeLists.txt`); `env.cpp` loads it from
+    there and upstream installed it next to the exe.
+  - `vJoyInterface.dll` is no longer shipped with MSVC builds: `proto-vjoystick` delay-loads it and loads the copy
+    that the installed vJoy driver put in `Program Files\vJoy\x64` (path from the vJoy uninstall registry key). The
+    SDK copy from opentrack-depends corrupted the heap with driver 2.1.9.1. MinGW builds still link and ship it.
 - Version string comes from `trackhat-opentrack-*` tags (`cmake/opentrack-version.cmake`), and the update check
   compares version numbers (only newer releases are offered) instead of exact strings.
 

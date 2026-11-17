@@ -11,6 +11,14 @@ if(WIN32 AND opentrack-intel)
         otr_module(proto-vjoy)
         target_link_libraries(opentrack-proto-vjoy PRIVATE ${lib})
         target_include_directories(opentrack-proto-vjoy SYSTEM PUBLIC "${SDK_VJOYSTICK}/inc")
-        install(FILES "${dll}" DESTINATION ${opentrack-libexec})
+        if(MSVC)
+            # Trackhat: vJoyInterface.dll must match the installed vJoy driver; the SDK's copy corrupts
+            # the heap with driver 2.1.9.1. So it is delay-loaded and vjoystick.cpp loads the one that the
+            # driver installed. It is not shipped.
+            target_link_options(opentrack-proto-vjoy PRIVATE "/DELAYLOAD:vJoyInterface.dll")
+            target_link_libraries(opentrack-proto-vjoy PRIVATE delayimp)
+        else()
+            install(FILES "${dll}" DESTINATION ${opentrack-libexec})
+        endif()
     endif()
 endif()

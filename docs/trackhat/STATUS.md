@@ -8,8 +8,8 @@ The owner (James) is not a C++ developer: Claude builds, tests and hands back so
 
 ## Where things are
 - **Repo:** `Documents\TrackHatOpentrackProject\opentrack-trackhat` on the owner's Windows 11 PC.
-  Remote `fork` = https://github.com/Bfreak/opentrack (push here). Remote `origin` = upstream opentrack (never push).
-  Never open a PR with `gh pr create` without `--repo Bfreak/opentrack`: the default base would be upstream.
+  Remote `origin` = https://github.com/Bfreak/opentrack (push here). Remote `upstream` = opentrack/opentrack, fetch-only
+  (push URL `DISABLED`); `gh` defaults to the fork. Branch layout and rules: `GITHUB-AND-ENVIRONMENT.md`.
 - **Branch:** `trackhat-2026.1` is the release branch and holds everything. `trackhat-head-test` and `trackhat-ui-theme`
   are fully merged into it (fast-forward) and can be deleted, locally and on the fork.
 - **Release:** tag `trackhat-opentrack-3.3` at `abb0eb8e`. Installer `trackhat-opentrack-3.3-win64-setup.exe`
@@ -20,8 +20,17 @@ The owner (James) is not a C++ developer: Claude builds, tests and hands back so
   the website line to `SOFTWARE-UPDATE-V3: trackhat-opentrack-3.3` (3.2 installs are notified as soon as it changes).
 - **Local build:** `scripts\windows-local\build.bat` → `..\build-local\install\opentrack.exe` (deps in `..\deps`,
   see `WINDOWS-LOCAL-BUILD.md`). It has no vJoy and no OSC; those only build in CI.
-- **CI:** `.github/workflows/trackhat-windows.yml` builds on every push to `trackhat-*` branches and tags
-  (about 10 minutes, installer + portable zip as artifacts). All runs up to `b25f1277` are green.
+- **CI:** `.github/workflows/trackhat-windows.yml` builds on every push to `trackhat-*` branches
+  (about 10 minutes, installer + portable zip as artifacts; run it manually with `release_tag` to attach them to a release).
+
+## Crash on Start in every Windows build up to the 2026.1 beta - FIXED 2026-11-17
+Found by running the beta's portable zip on this PC with the sensor (`OPENTRACK_UI_SNAPSHOT_START=1`):
+1. `onnxruntime.dll` was installed next to the exe, but the tracker loads it from `modules\` -> abort (0xC0000409).
+   The local build only worked because Windows' own `onnxruntime.dll` (1.17 "germanium") had been copied into `modules\` by hand.
+2. The shipped SDK `vJoyInterface.dll` corrupts the heap with vJoy driver 2.1.9.1 (installed here) -> 0xC0000374.
+   vJoy output is on by default, so anyone with that driver crashed.
+Fix: see PORTING-NOTES "Windows runtime DLLs". The 3.3 / 3.3.1 installers were built the same way and very likely crash too
+(not run).
 - **Workflow:** from 2026-11-12 the owner works in **VS Code** (Claude Code extension). Tasks are in `.vscode/tasks.json`
   (Terminal > Run Task): build, run, UI self-test, scene screenshots, CI status.
 
@@ -116,3 +125,5 @@ owner whether to move the `3.3` tag or tag `3.3.1`.
 - 2026-11-12: status rewritten; VS Code workflow set up. Owner's seven fixes done (above), built and self-tested; not committed.
 - 2026-11-16 (cloud session): Linux build of the current branch verified (Ubuntu 24.04, Qt 6.4.2, ORT 1.17.3; UI and test-window
   snapshots under Xvfb look right). Linux/macOS viability and plan written: `LINUX-MACOS-PLAN.md`.
+- 2026-11-17: fork tidied (`master` = clean upstream mirror, `trackhat-2026.1` default, remotes renamed). 2026.1 beta found to
+  crash on Start (ONNX Runtime location, vJoy DLL mismatch); fixed. MediaPipe prototype built and tracking locally.
