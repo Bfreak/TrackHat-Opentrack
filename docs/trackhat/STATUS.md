@@ -113,6 +113,13 @@ owner whether to move the `3.3` tag or tag `3.3.1`.
   headless (no camera, no Wine/X-Plane outputs built). macOS: never built.
 
 ## Known rough edges (noticed, not fixed)
+- Start still takes ~4 s with the sensor (measured 2026-11-18, timing marks in the app): camera open ~1 s, then the
+  exposure controls. `set_exposure()` writes ~10 UVC controls at ~0.1 s each (~1.5-1.9 s a round) and `writes = 3`
+  (Stanislaw Halik, 2024, "try harder to set exposure on startup") repeats the round on the first three frames, so the
+  first frames after Start also stall. Fewer rounds would be faster, but nobody has checked whether the sensor then
+  keeps its exposure; test on the sensor before changing it.
+- The UI self-test (`OPENTRACK_UI_SNAPSHOT`) writes `HKCU\Software\Freetrack`, `NaturalPoint` and an empty `trackhat-v3`
+  key even with every output off and a portable profile; cause not found. Matters for clean-PC tests.
 - Pose preview, front view: the eye sockets read as one dark band across the face.
 - While tracking, the "Preview" checkbox sits near the reticle's lower marker.
 - Protocol names in the tab come from the modules as they are ("mouse emulation", "freetrack").
@@ -137,3 +144,6 @@ owner whether to move the `3.3` tag or tag `3.3.1`.
   snapshots under Xvfb look right). Linux/macOS viability and plan written: `LINUX-MACOS-PLAN.md`.
 - 2026-11-17: fork tidied (`master` = clean upstream mirror, `trackhat-2026.1` default, remotes renamed). 2026.1 beta found to
   crash on Start (ONNX Runtime location, vJoy DLL mismatch); fixed. MediaPipe prototype built and tracking locally.
+- 2026-11-18: head offset defaults -70 / -25 / 0 mm. Start sped up: the sensor was restarted twice by redundant frame size
+  and FPS sets (DirectShow restarts on each, ~2 s); now only changed when different. Start 7.7 s -> ~4.3 s, UI self-test
+  with tracking 14.4 s -> 10.3 s. The sensor opens at 640x480 MJPEG, ~58 fps by itself.

@@ -89,8 +89,9 @@ static const std::array<resolution_tuple, 10> resolution_choices = { {
 
 struct Settings : opts
 {
-    value<int> offset_fwd{ b, "offset-fwd", 200 }, // Millimeters (TrackHat default; upstream 2026 uses -100)
-        offset_up{ b, "offset-up", 0 }, offset_right{ b, "offset-right", 0 };
+    // Millimeters. TrackHat defaults (2026-11-18); upstream 2026 uses fwd -100, up 0, right 0.
+    value<int> offset_fwd{ b, "offset-fwd", -70 },
+        offset_up{ b, "offset-up", -25 }, offset_right{ b, "offset-right", 0 };
     value<QString> camera_name{ b, "camera-name", "" };
     value<int> fov{ b, "field-of-view", 56 };
     value<fps_choices> force_fps{ b, "force-fps", fps_default };

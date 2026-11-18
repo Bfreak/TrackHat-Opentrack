@@ -24,7 +24,7 @@ and hand back something runnable. Prefer finished, tested artifacts over explana
 - `opentrack/defs.hpp`: `UI_FORCED_TRACKER "neuralnet"`, `UI_FORCED_FILTER "accela"`, `UI_NO_*`, `UI_COMPACT_VIDEO_FEED`.
 - `tracker-neuralnet/`: fixed 60 deg FOV, fixed 640x480@60 MJPEG, prefers camera named "TrackHat sensor" (first list
   entry; reopened live when the override changes), exposure presets (Auto/Near/Medium/Far/Custom, Auto = 4 is the default),
-  advanced options hidden, defaults: forward offset 200 mm,
+  advanced options hidden, defaults: head offset forward -70 / up -25 / right 0 mm,
   1 ONNX thread, model `head-pose-0.5-small.onnx` (0.2-small still shipped).
 - `video-opencv/`: exposure presets, DirectShow camera settings; `compat/camera-names.cpp`: no device path appended to DShow names.
 - `opentrack/software-update-dialog.cpp`: checks trackhat.org for `SOFTWARE-UPDATE-V3: <version>`.

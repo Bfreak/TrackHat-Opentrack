@@ -41,7 +41,7 @@ Trackhat features are carried over, with upstream's improvements since then.
 - Windows 11 camera-bug workaround; no device path appended to DirectShow names; trackhat.org update checker; OSC output.
 
 ## Deliberate differences
-- Forward head offset stays 200 mm (upstream default now -100); ONNX threads stay 1 (upstream now 2).
+- Head center offset defaults to forward -70 mm, up -25 mm, right 0 (was 200 / 0 / 0; upstream -100 / 0 / 0); ONNX threads stay 1 (upstream now 2).
 - Exposure enumerators renamed `range_near/far/medium` (Windows header macro clash); numeric values unchanged.
 - Model picker UI not exposed. Personal todo commits / `todo.md` not carried over.
 

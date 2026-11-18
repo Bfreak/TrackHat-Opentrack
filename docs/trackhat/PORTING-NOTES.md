@@ -47,7 +47,8 @@ The branch was merged (real 3-way merge, history preserved) into the 2026.1.0 re
   upstream's implementations (upstream fixed roll in 2023 and 2025; `tracking_valid_` supersedes
   TrackHat's `optional<Affine>` workaround). The model picker UI is not exposed.
 - **Defaults kept at TrackHat's values** where upstream changed them for tuning reasons:
-  forward head offset 200 mm (upstream now -100), ONNX threads 1 (upstream now 2).
+  ONNX threads 1 (upstream now 2). Head center offset is TrackHat's own: forward -70 mm, up -25 mm, right 0
+  (2026-11-18; was 200 / 0 / 0, upstream -100 / 0 / 0).
 - `exposure_preset` enumerators renamed `range_near/range_far/range_medium` (the old `near`/`far`
   names are macros in `<windows.h>`). Numeric values are unchanged, so saved profiles stay valid.
 - ps3eye submodule and MSVC `sdk-paths-*` files use upstream's versions (not used by the TrackHat build).
