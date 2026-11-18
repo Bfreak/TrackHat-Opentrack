@@ -92,6 +92,14 @@ Don&apos;t roll or change position.</source>
         <source>Exposure preset</source>
         <translation type="unfinished"></translation>
     </message>
+    <message>
+        <source>Tracking model</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>The model that finds the head pose in the camera image. Can be changed while tracking.</source>
+        <translation type="unfinished"></translation>
+    </message>
 </context>
 <context>
     <name>neuralnet_tracker_ns::NeuralNetDialog</name>
@@ -137,6 +145,18 @@ Don&apos;t roll or change position.</source>
     </message>
     <message>
         <source>Custom</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Neural net (default)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>MediaPipe face mesh (experimental)</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Auto</source>
         <translation type="unfinished"></translation>
     </message>
 </context>

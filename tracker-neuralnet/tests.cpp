@@ -1,10 +1,16 @@
 #include "model_adapters.h"
+#include "facemesh.h"
+#include "facemesh_canonical.h"
 #include "ftnoir_tracker_neuralnet.h"
 #include "compat/macros.h"
 
 #include <algorithm>
 #include <cstdio>
+#include <cmath>
 #include <numeric>
+#include <vector>
+
+#include <opencv2/core/quaternion.hpp>
 
 namespace neuralnet_tracker_tests
 {
@@ -131,8 +137,30 @@ void test_get_matching_level()
 }
 
 
+void test_facemesh_fit()
+{
+    using neuralnet_tracker_ns::FaceMeshEstimator;
+    namespace canonical = neuralnet_tracker_ns::facemesh_canonical;
+
+    // Move the canonical face model with a known similarity transform. The fit must recover it.
+    const float scale = 3.5f;
+    const cv::Vec3f translation{ 160.f, 120.f, -7.f };
+    const cv::Matx33f rotation = cv::Quatf::createFromEulerAngles({ 0.3f, -0.5f, 0.2f }, cv::QuatEnum::INT_XYZ).toRotMat3x3();
+
+    std::vector<cv::Point3f> landmarks;
+    for (const auto& v : canonical::vertices)
+        landmarks.emplace_back(scale * (rotation * cv::Vec3f{ v[0], v[1], v[2] }) + translation);
+
+    const auto fit = FaceMeshEstimator::fit_canonical_model(landmarks.data());
+    assert_(fit.has_value());
+    assert_(std::abs(fit->scale - scale) < 1e-3f);
+    assert_(cv::norm(fit->translation - translation) < 1e-2f);
+    assert_(cv::norm(fit->rotation - rotation) < 1e-4f);
+}
+
 void run()
 {
+    test_facemesh_fit();
     test_find_input_intensity_quantile();
     test_normalize_brightness();
     test_image_pyramid();

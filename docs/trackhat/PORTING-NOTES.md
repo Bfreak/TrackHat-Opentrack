@@ -62,6 +62,12 @@ The branch was merged (real 3-way merge, history preserved) into the 2026.1.0 re
 - Version string comes from `trackhat-opentrack-*` tags (`cmake/opentrack-version.cmake`), and the update check
   compares version numbers (only newer releases are offered) instead of exact strings.
 
+## Experimental (branch `trackhat-mediapipe-prototype` only)
+
+- **MediaPipe face mesh tracking model** in `tracker-neuralnet/` (`facemesh.*`, `file_camera.*`, two extra ONNX
+  models, `3rdparty-notices/MEDIAPIPE.txt`), selected with the `pose-backend` setting. The default model's code
+  path is unchanged. See `docs/trackhat/MEDIAPIPE-PROTOTYPE.md`.
+
 ## Upstream fixes after 2026.1.0 that were cherry-picked
 
 Linux/macOS NN build: `f93040e6 9fc56ac8 8497be40 0779d3ce 4efe501b`

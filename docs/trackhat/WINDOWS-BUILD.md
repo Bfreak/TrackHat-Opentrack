@@ -57,6 +57,23 @@ CMake caches, so treat `scripts/windows-cross/build-windows.sh` as a faithful re
 Main window rendered correctly, profile dir `Documents/trackhat-v3` created, update check reached trackhat.org (TLS via schannel) and showed the update dialog.
 Wine cannot test cameras or the neural-net run path; the Options/tracker dialog was not exercised.
 
+## Rebuilt on 2026-11-14 (branch `trackhat-mediapipe-prototype`)
+Done again from scratch on a 4-core cloud machine (about 25 minutes including OpenCV). What was needed beyond the above:
+- Qt: `pip install aqtinstall`, then
+  `aqt install-qt -b https://master.qt.io/ windows desktop 6.8.3 win64_mingw -m qtserialport qtmultimedia qtimageformats -O $WORK/qt`
+  and `aqt install-qt -b https://master.qt.io/ linux desktop 6.8.3 linux_gcc_64 -m qtserialport qtmultimedia -O $WORK/qt`.
+  The cloud environment must allow `download.qt.io` and `master.qt.io` (the "opentrack" environment does).
+- OpenCV: `git clone --depth 1 --branch 4.10.0 https://github.com/opencv/opencv.git` works without attaching the repo.
+  Configured with `-DBUILD_LIST=core,imgproc,imgcodecs,videoio,calib3d,features2d,flann,video,highgui`, FFmpeg off.
+- oscpack: on Windows `proto-osc` looks for `liboscpack.a` in `$SDK_OSCPACK` itself, not in `lib/`.
+- **`onnxruntime.dll` must also be in `modules/`**: the tracker loads it from there, the install rule puts it next to
+  `opentrack.exe`. Without the copy, starting tracking aborts ("can't load onnxruntime library"). `build-windows.sh`
+  now copies it. Whether the MSVC installs have the same gap was not checked from here.
+- The neural-net path can now be tested under Wine: convert a clip to MJPEG AVI (`ffmpeg -i clip.mp4 -an -c:v mjpeg
+  -q:v 3 clip.avi`; this OpenCV build has no FFmpeg, MJPEG AVI is decoded built-in) and run with
+  `OPENTRACK_VIDEO_FILE='Z:\path\clip.avi'` (see `MEDIAPIPE-PROTOTYPE.md`). Both models tracked every frame of the
+  Sensor V2 clip this way, with the same angles as the Linux build.
+
 ## Known limitations
 - MinGW (GCC) ABI: `onnxruntime.dll` is an MSVC DLL called through its C API only (fine). Don't link C++ MSVC libraries.
 - MSMF capture is not built into the OpenCV; DirectShow is used (matches the original Trackhat behaviour).

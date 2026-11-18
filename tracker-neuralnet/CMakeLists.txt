@@ -30,6 +30,7 @@ if(OpenCV_FOUND AND ONNXRuntime_FOUND AND OpenMP_FOUND)
         opencv_calib3d
         opencv_imgproc
         opencv_imgcodecs
+        opencv_videoio
         opencv_core
         OpenMP::OpenMP_CXX
         )
@@ -43,6 +44,8 @@ if(OpenCV_FOUND AND ONNXRuntime_FOUND AND OpenMP_FOUND)
         FILES "models/head-localizer.onnx"
               "models/head-pose-0.2-small.onnx"
               "models/head-pose-0.5-small.onnx"
+              "models/mediapipe-face-detector.onnx"
+              "models/mediapipe-face-landmarks.onnx"
         DESTINATION "${opentrack-libexec}/models"
         PERMISSIONS ${opentrack-perms-file}
         )

@@ -80,6 +80,25 @@ void Preview::draw_gizmos(const std::optional<PoseEstimator::Face>& face,
     }
 }
 
+void Preview::draw_landmarks(const std::vector<cv::Point2f>& landmarks)
+{
+    if (preview_image_.empty())
+        return;
+
+    const cv::Rect bounds{ 0, 0, preview_image_.cols, preview_image_.rows };
+    const cv::Vec3b color{ 255, 255, 0 };
+    for (const auto& p : landmarks)
+    {
+        const cv::Point q = transform(p);
+        if (!bounds.contains(q))
+            continue;
+        if (preview_image_.channels() == 3)
+            preview_image_.at<cv::Vec3b>(q) = color;
+        else if (preview_image_.channels() == 1)
+            preview_image_.at<uint8_t>(q) = 255;
+    }
+}
+
 void Preview::overlay_netinput(const cv::Mat& netinput)
 {
     if (netinput.empty())

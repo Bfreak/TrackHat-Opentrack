@@ -7,6 +7,7 @@
 
 #include "ftnoir_tracker_neuralnet.h"
 #include "deadzone_filter.h"
+#include "file_camera.h"
 #include "opencv_contrib.h"
 
 #include "compat/check-visible.hpp"
@@ -24,6 +25,7 @@
 #pragma warning(disable : 4702)
 #endif
 
+#include <QCoreApplication>
 #include <QDebug>
 #include <QFile>
 #include <QFileDialog>
@@ -403,7 +405,24 @@ bool NeuralNetTracker::detect()
     // with the current ROI is too poor we have to run it again. This causes a
     // latency spike of maybe an additional 50%. But it only occurs when the user
     // moves his head far enough - or when the tracking ist lost ...
-    if (!last_localizer_roi_ || !last_roi_ || iou(*last_localizer_roi_, *last_roi_) < 0.25)
+    if (facemesh_)
+    {
+        // The face mesh model reports by itself whether it sees a face, and it does not recover
+        // from a wrong ROI like the pose network does. So the detector only runs when there is
+        // no track, as in MediaPipe.
+        last_localizer_roi_.reset();
+        if (!last_roi_)
+        {
+            const auto detection = face_detector_->run(pyramid_.coarsest_greyscale());
+            inference_time += face_detector_->last_inference_time_millis();
+            if (detection)
+            {
+                last_roi_ = detection->box;
+                facemesh_->set_roll(detection->roll);
+            }
+        }
+    }
+    else if (!last_localizer_roi_ || !last_roi_ || iou(*last_localizer_roi_, *last_roi_) < 0.25)
     {
         auto [p, rect] = localizer_->run(pyramid_.coarsest_greyscale());
         inference_time += localizer_->last_inference_time_millis();
@@ -449,6 +468,9 @@ bool NeuralNetTracker::detect()
         }
     }
 
+    preview_landmarks_.clear();
+    last_face_.reset();
+
     if (!last_roi_)
     {
         // Last iteration the tracker failed to generate a trustworthy
@@ -457,16 +479,33 @@ bool NeuralNetTracker::detect()
         return false;
     }
 
+    // The face mesh model sees a patch which is larger than the face box.
+    const float desired_roi_width = facemesh_
+        ? facemesh_->input_image_size().width / FaceMeshEstimator::ROI_SCALE
+        : poseestimator_->input_image_size().width;
+
     const auto [scale_factor, input_depth] = get_matching_level(
         pyramid_, 
         pyramid_.depth()-1, 
         last_roi_->width, 
-        poseestimator_->input_image_size().width);
+        desired_roi_width);
     
     const auto input_roi = scaled(*last_roi_, scale_factor);
 
-    auto face = poseestimator_->run(pyramid_.greyscale(input_depth), input_roi);
-    inference_time += poseestimator_->last_inference_time_millis();
+    std::optional<PoseEstimator::Face> face;
+    if (facemesh_)
+    {
+        face = facemesh_->run(pyramid_.greyscale(input_depth), input_roi);
+        inference_time += facemesh_->last_inference_time_millis();
+        if (face && is_visible_)
+            for (const auto& p : facemesh_->last_landmarks())
+                preview_landmarks_.push_back(p * (1.f / scale_factor));
+    }
+    else
+    {
+        face = poseestimator_->run(pyramid_.greyscale(input_depth), input_roi);
+        inference_time += poseestimator_->last_inference_time_millis();
+    }
     
     if (!face)
     {
@@ -477,6 +516,7 @@ bool NeuralNetTracker::detect()
 
     // Transform to reference image
     *face = scaled(*face, 1.f / scale_factor);
+    last_face_ = face;
 
     cv::Rect2f roi = expand(face->box, (float)settings_.roi_zoom);
 
@@ -503,11 +543,12 @@ void NeuralNetTracker::draw_gizmos(const std::optional<PoseEstimator::Face>& fac
         return;
 
     const auto& reference_image = pyramid_.coarsest_greyscale();
+    preview_.draw_landmarks(preview_landmarks_);
     preview_.draw_gizmos(face, last_roi_, last_localizer_roi_, world_to_image(pose.t, reference_image.size(), intrinsics_));
 
     if (settings_.show_network_input)
     {
-        cv::Mat netinput = poseestimator_->last_network_input();
+        cv::Mat netinput = facemesh_ ? facemesh_->last_network_input() : poseestimator_->last_network_input();
         preview_.overlay_netinput(netinput);
     }
 }
@@ -533,7 +574,8 @@ QuatPose NeuralNetTracker::transform_to_world_pose(const cv::Quatf& face_rotatio
 
 QuatPose NeuralNetTracker::compute_filtered_pose(const PoseEstimator::Face& face)
 {
-    if (fps_ > 0.001 && last_pose_ && poseestimator_->has_uncertainty() && settings_.internal_filter_enabled)
+    // The face mesh model gives no uncertainty estimate, which the internal filter needs.
+    if (fps_ > 0.001 && last_pose_ && poseestimator_ && poseestimator_->has_uncertainty() && settings_.internal_filter_enabled)
     {
         auto image2world = [this](const cv::Quatf& face_rotation, const cv::Point2f& face_xy, const float face_size)
         { return this->transform_to_world_pose(face_rotation, face_xy, face_size); };
@@ -568,6 +610,17 @@ module_status NeuralNetTracker::start_tracker(QFrame* videoframe)
     // to concurrent accesses from other threads.
     num_threads_ = settings_.num_threads;
 
+    // Development aids: play a video file instead of the camera, force the pose model, log every pose.
+    video_file_ = qEnvironmentVariable("OPENTRACK_VIDEO_FILE");
+    if (const QString name = qEnvironmentVariable("OPENTRACK_POSE_BACKEND").toLower(); !name.isEmpty())
+        backend_override_ = (name == "mediapipe" || name == "facemesh" || name == "1") ? backend_facemesh : backend_posenet;
+    if (const QString path = qEnvironmentVariable("OPENTRACK_POSE_LOG"); !path.isEmpty())
+    {
+        pose_log_.setFileName(path);
+        if (pose_log_.open(QFile::WriteOnly | QFile::Truncate | QFile::Text))
+            pose_log_.write("frame,tracked,yaw,pitch,roll,x,y,z,inference_ms,face_x,face_y,face_size\n");
+    }
+
     if (!load_and_initialize_model())
         return error("Couldn't initialize the model.");
 
@@ -585,12 +638,28 @@ module_status NeuralNetTracker::start_tracker(QFrame* videoframe)
     return status_ok();
 }
 
+int NeuralNetTracker::wanted_backend() const
+{
+    if (backend_override_ >= 0)
+        return backend_override_;
+    return std::clamp(int(*settings_.pose_backend), 0, int(backend_MAX) - 1);
+}
+
 bool NeuralNetTracker::load_and_initialize_model()
 {
     const QString localizer_model_path_enc = OPENTRACK_BASE_PATH + "/" OPENTRACK_LIBRARY_PATH "/models/head-localizer.onnx";
     const QString poseestimator_model_path_enc = get_posenet_filename();
+    const QString facemesh_model_path_enc = get_default_model_directory().absoluteFilePath("mediapipe-face-landmarks.onnx");
+    const QString face_detector_model_path_enc = get_default_model_directory().absoluteFilePath("mediapipe-face-detector.onnx");
 
     maybe_load_onnxruntime_dynamically();
+
+    // Sessions must not outlive the environment they were made with (also when switching models while tracking).
+    facemesh_.reset();
+    face_detector_.reset();
+    poseestimator_.reset();
+    localizer_.reset();
+    active_backend_ = wanted_backend();
 
     try
     {
@@ -606,10 +675,18 @@ bool NeuralNetTracker::load_and_initialize_model()
         opts.AddConfigEntry("session.inter_op.allow_spinning", "0");
         allocator_info_ = Ort::MemoryInfo::CreateCpu(OrtArenaAllocator, OrtMemTypeDefault);
 
-        localizer_.emplace(allocator_info_, Ort::Session{ env_, convert(localizer_model_path_enc).c_str(), opts });
-
-        qDebug() << "Loading pose net " << poseestimator_model_path_enc;
-        poseestimator_.emplace(allocator_info_, Ort::Session{ env_, convert(poseestimator_model_path_enc).c_str(), opts });
+        if (active_backend_ == backend_facemesh)
+        {
+            qDebug() << "Loading face mesh model " << facemesh_model_path_enc;
+            face_detector_.emplace(allocator_info_, Ort::Session{ env_, convert(face_detector_model_path_enc).c_str(), opts });
+            facemesh_.emplace(allocator_info_, Ort::Session{ env_, convert(facemesh_model_path_enc).c_str(), opts });
+        }
+        else
+        {
+            localizer_.emplace(allocator_info_, Ort::Session{ env_, convert(localizer_model_path_enc).c_str(), opts });
+            qDebug() << "Loading pose net " << poseestimator_model_path_enc;
+            poseestimator_.emplace(allocator_info_, Ort::Session{ env_, convert(poseestimator_model_path_enc).c_str(), opts });
+        }
     }
     catch (const Ort::Exception& e)
     {
@@ -639,6 +716,19 @@ bool NeuralNetTracker::open_camera()
     camera_ = nullptr;
     const QString name = settings_.camera_name;
     opened_camera_name_ = name;
+
+    if (!video_file_.isEmpty())
+    {
+        // Loops, except when logging poses: then each frame is wanted exactly once.
+        auto cam = std::make_unique<file_camera>(video_file_, !pose_log_.isOpen());
+        if (!cam->start(args))
+        {
+            qDebug() << "neuralnet tracker: can't open video file" << video_file_;
+            return false;
+        }
+        camera_ = std::move(cam);
+        return true;
+    }
 
     auto try_open = [&](std::unique_ptr<video::impl::camera> cam) {
         if (cam && cam->start(args))
@@ -690,6 +780,19 @@ void NeuralNetTracker::run()
             last_roi_.reset();
         }
 
+        // Pose model changed while tracking
+        if (wanted_backend() != active_backend_)
+        {
+            if (!load_and_initialize_model())
+            {
+                portable::sleep(1000);
+                continue;
+            }
+            last_localizer_roi_.reset();
+            last_roi_.reset();
+            last_pose_.reset();
+        }
+
         auto t = clk.now();
         {
             QMutexLocker l(&camera_mtx_);
@@ -699,6 +802,13 @@ void NeuralNetTracker::run()
             if (!res)
             {
                 l.unlock();
+                if (!video_file_.isEmpty() && pose_log_.isOpen() && !video_file_ended_)
+                {
+                    // The whole file was played and logged: the run is complete.
+                    video_file_ended_ = true;
+                    pose_log_.close();
+                    QMetaObject::invokeMethod(qApp, "quit", Qt::QueuedConnection);
+                }
                 portable::sleep(100);
                 continue;
             }
@@ -729,6 +839,7 @@ void NeuralNetTracker::run()
             QMutexLocker lck(&mtx_);
             tracking_valid_ = tracked;
         }
+        log_pose(tracked);
 
         if (is_visible_)
         {
@@ -769,23 +880,9 @@ void NeuralNetTracker::update_fps(double dt)
     }
 }
 
-void NeuralNetTracker::data(double* data)
+// Yaw, pitch, roll in degrees and position in cm, in opentrack's axis order.
+static void affine_to_data(const Affine& tmp, double* data)
 {
-    Affine tmp = [&]()
-    {
-        QMutexLocker lck(&mtx_);
-        if (!tracking_valid_)
-        {
-            for (int i = 0; i < 6; i++)
-                data[i] = std::numeric_limits<double>::quiet_NaN();
-            return Affine{};
-        }
-        return last_pose_affine_;
-    }();
-
-    if (std::isnan(data[0]))
-        return;
-
     const auto& mx = tmp.R.col(0);
     const auto& my = tmp.R.col(1);
     const auto& mz = tmp.R.col(2);
@@ -810,6 +907,43 @@ void NeuralNetTracker::data(double* data)
         data[TY] = tmp.t[1] * 0.1;
         data[TZ] = -tmp.t[0] * 0.1;
     }
+}
+
+void NeuralNetTracker::data(double* data)
+{
+    Affine tmp = [&]()
+    {
+        QMutexLocker lck(&mtx_);
+        if (!tracking_valid_)
+        {
+            for (int i = 0; i < 6; i++)
+                data[i] = std::numeric_limits<double>::quiet_NaN();
+            return Affine{};
+        }
+        return last_pose_affine_;
+    }();
+
+    if (std::isnan(data[0]))
+        return;
+
+    affine_to_data(tmp, data);
+}
+
+void NeuralNetTracker::log_pose(bool tracked)
+{
+    const int frame = frame_count_++;
+    if (!pose_log_.isOpen())
+        return;
+
+    double d[6] = {};
+    if (tracked)
+        affine_to_data(last_pose_affine_, d); // Only written by this thread
+    char buf[256];
+    std::snprintf(buf, sizeof(buf), "%d,%d,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.2f,%.2f,%.2f,%.2f\n", frame, int(tracked),
+                  d[Yaw], d[Pitch], d[Roll], d[TX], d[TY], d[TZ], inference_time_,
+                  last_face_ ? last_face_->center.x : 0.f, last_face_ ? last_face_->center.y : 0.f, last_face_ ? last_face_->size : 0.f);
+    pose_log_.write(buf);
+    pose_log_.flush();
 }
 
 Affine NeuralNetTracker::pose()
@@ -860,6 +994,10 @@ NeuralNetDialog::NeuralNetDialog() : trans_calib_(1, 2)
     tie_setting(settings_.offset_up, ui_.ty_spin);
     tie_setting(settings_.offset_right, ui_.tz_spin);
     tie_setting(settings_.internal_filter_enabled, ui_.internal_filter_enabled);
+
+    ui_.pose_backend->addItem(tr("Neural net (default)"));
+    ui_.pose_backend->addItem(tr("MediaPipe face mesh (experimental)"));
+    tie_setting(settings_.pose_backend, ui_.pose_backend);
 
     {
         const struct

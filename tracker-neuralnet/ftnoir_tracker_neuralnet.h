@@ -8,6 +8,7 @@
 #pragma once
 
 #include "deadzone_filter.h"
+#include "facemesh.h"
 #include "model_adapters.h"
 #include "preview.h"
 #include "ui_neuralnet-trackercontrols.h"
@@ -22,6 +23,7 @@
 #include "video-opencv/settings.hpp"
 
 #include <QDialog>
+#include <QFile>
 #include <QHBoxLayout>
 #include <QMutex>
 #include <QObject>
@@ -56,6 +58,14 @@ enum fps_choices
     fps_250 = 10,
     fps_90 = 11,
     fps_MAX,
+};
+
+// Which model turns the face image into a head pose.
+enum pose_backend
+{
+    backend_posenet = 0,  // opentrack's head pose network (default)
+    backend_facemesh = 1, // MediaPipe face detector and landmarks + canonical face model fit (experimental)
+    backend_MAX,
 };
 
 struct resolution_tuple
@@ -95,6 +105,7 @@ struct Settings : opts
     value<double> deadzone_hardness{ b, "deadzone-hardness", 1.5 };
     value<QString> posenet_file{ b, "posenet-file", "head-pose-0.5-small.onnx" };
     value<bool> internal_filter_enabled{ b, "internal-filter-enabled", true };
+    value<int> pose_backend{ b, "pose-backend", backend_posenet };
     Settings();
 };
 
@@ -164,6 +175,9 @@ private:
     // Compute the pose in 3d space taking the network outputs
     QuatPose transform_to_world_pose(const cv::Quatf& face_rotation, const cv::Point2f& face_xy, const float face_size) const;
     QString get_posenet_filename() const;
+    // The backend chosen in the settings, unless OPENTRACK_POSE_BACKEND overrides it.
+    int wanted_backend() const;
+    void log_pose(bool tracked);
 
     Settings settings_;
     // Camera name the open camera was chosen for; run() reopens the camera when the setting changes.
@@ -176,6 +190,18 @@ private:
     Ort::Env env_{ nullptr };
     std::optional<Localizer> localizer_;
     std::optional<PoseEstimator> poseestimator_;
+    std::optional<FaceDetector> face_detector_;
+    std::optional<FaceMeshEstimator> facemesh_;
+    int active_backend_ = backend_posenet;
+    std::vector<cv::Point2f> preview_landmarks_; // In the reference image
+
+    // Development aids, see docs/trackhat/MEDIAPIPE-PROTOTYPE.md
+    QString video_file_;         // OPENTRACK_VIDEO_FILE: play this file instead of opening a camera
+    bool video_file_ended_ = false;
+    int backend_override_ = -1;  // OPENTRACK_POSE_BACKEND
+    QFile pose_log_;             // OPENTRACK_POSE_LOG: one CSV line per frame
+    int frame_count_ = 0;
+    std::optional<PoseEstimator::Face> last_face_;
 
     cv::Mat frame_copy_ = {};
     ImagePyramid pyramid_ = {};
