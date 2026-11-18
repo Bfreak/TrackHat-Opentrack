@@ -3,6 +3,7 @@
 #include "video-property-page.hpp"
 #include <opencv2/core/utils/logger.hpp>
 #include <QDebug>
+#include <cmath>
 
 namespace opencv_camera_impl {
 
@@ -105,10 +106,29 @@ bool cam::start(info& args)
     cv::utils::logging::setLogLevel(cv::utils::logging::LogLevel::LOG_LEVEL_WARNING);
     cap.emplace(idx, video_capture_backend);
 
-#if !defined _WIN32 && !defined __APPLE__
+#if defined _WIN32
+    // Trackhat: with DirectShow, setting the frame size or FPS stops and restarts the camera (~2 s each
+    // with the sensor, also when the value doesn't change). The sensor already opens at 640x480 MJPEG
+    // at its full ~58 fps, so only change what differs. FPS reads 0 when DirectShow doesn't report it;
+    // then it is left alone. Measured 2026-11-18: first frame ~6 s before, see docs/trackhat/STATUS.md.
+    {
+        const int mjpg = cv::VideoWriter::fourcc('M', 'J', 'P', 'G');
+        if (args.width > 0 && args.height > 0 &&
+            ((int)cap->get(cv::CAP_PROP_FRAME_WIDTH) != args.width || (int)cap->get(cv::CAP_PROP_FRAME_HEIGHT) != args.height))
+        {
+            cap->set(cv::CAP_PROP_FRAME_WIDTH,  args.width);
+            cap->set(cv::CAP_PROP_FRAME_HEIGHT, args.height);
+        }
+        if (const double fps = cap->get(cv::CAP_PROP_FPS); args.fps > 0 && fps > 0 && std::abs(fps - args.fps) > 1)
+            cap->set(cv::CAP_PROP_FPS, args.fps);
+        if (args.use_mjpeg && (int)cap->get(cv::CAP_PROP_FOURCC) != mjpg)
+            cap->set(cv::CAP_PROP_FOURCC, mjpg);
+    }
+#else
+#   if !defined __APPLE__
     if (args.use_mjpeg)
         cap->set(cv::CAP_PROP_FOURCC, cv::VideoWriter::fourcc('M', 'J', 'P', 'G'));
-#endif
+#   endif
 
     if (args.width > 0 && args.height > 0)
     {
@@ -118,9 +138,10 @@ bool cam::start(info& args)
     if (args.fps > 0)
         cap->set(cv::CAP_PROP_FPS, args.fps);
 
-#if defined _WIN32 || defined __APPLE__
+#   if defined __APPLE__
     if (args.use_mjpeg)
         cap->set(cv::CAP_PROP_FOURCC, cv::VideoWriter::fourcc('M', 'J', 'P', 'G'));
+#   endif
 #endif
 
     set_exposure(*s.exposure);
