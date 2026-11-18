@@ -102,6 +102,10 @@ owner whether to move the `3.3` tag or tag `3.3.1`.
 - Performance of the test window on integrated graphics; machines without OpenGL 3.3. Linux: the 2026-11-16 build ran only
   headless (no camera, no Wine/X-Plane outputs built). macOS: never built.
 
+## First-run setup wizard - BUILT 2026-11-18, NEEDS THE OWNER'S LIVE TEST
+All pages render (checked with `OPENTRACK_SETUP_WIZARD_SNAPSHOT`). Not tried with a person in front of the sensor:
+the head center calibration, hotkey capture from the wizard, and the presets changing the view live. See `SETUP-WIZARD.md`.
+
 ## Known rough edges (noticed, not fixed)
 - Start still takes ~4 s with the sensor (measured 2026-11-18, timing marks in the app): camera open ~1 s, then the
   exposure controls. `set_exposure()` writes ~10 UVC controls at ~0.1 s each (~1.5-1.9 s a round) and `writes = 3`

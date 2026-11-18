@@ -14,6 +14,7 @@ and hand back something runnable. Prefer finished, tested artifacts over explana
 5. `docs/trackhat/CHANGELOG.md`: user-facing changelog, old Trackhat 3.2 -> this port.
 6. `docs/trackhat/GITHUB-AND-ENVIRONMENT.md`: GitHub/fork situation and sandbox constraints.
 7. `docs/trackhat/LINUX-MACOS-PLAN.md`: Linux/macOS viability and the plan for both builds.
+8. `docs/trackhat/SETUP-WIZARD.md`: the first-run setup wizard, its calibration maths and curve presets.
 
 ## What makes this a "Trackhat" build (don't undo)
 - `cmake/opentrack-variant.cmake`: Trackhat-only module list, ident `trackhat-v3`
@@ -30,6 +31,8 @@ and hand back something runnable. Prefer finished, tested artifacts over explana
   managed in Options > Protocols (`gui/options-dialog.cpp`). There is no protocol dropdown on the main window.
 - `gui/themes/midnight.qss` (default theme), `pose-widget/` (mannequin head, crosshair, reticle, brand font),
   `head-test/` (3D test window). See `docs/trackhat/STATUS.md` and `HEAD-TEST.md`.
+- `opentrack/setup-wizard.*`: first-run setup wizard (sensor, head center calibration, hotkeys, curve presets);
+  see `docs/trackhat/SETUP-WIZARD.md`. Check pages with `OPENTRACK_SETUP_WIZARD_SNAPSHOT=<dir>`.
 - `exposure_preset` enumerators are `range_near/range_far/range_medium` (NOT `near`/`far`: `<windows.h>` macros). Keep numeric values; profiles depend on them.
 
 ## Hard rules / gotchas

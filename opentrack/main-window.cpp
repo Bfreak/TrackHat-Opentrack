@@ -23,6 +23,7 @@
 #include "opentrack/defs.hpp"
 #include "software-update-dialog.hpp"
 #include "head-test/head-test-window.hpp"
+#include "setup-wizard.hpp"
 
 #include <cstring>
 #include <functional>
@@ -256,6 +257,18 @@ main_window::main_window() : State(OPENTRACK_BASE_PATH + OPENTRACK_LIBRARY_PATH)
 
     updater = std::make_unique<update_query>(this);
     updater->maybe_show_dialog();
+
+    // Trackhat: first-run setup wizard. OPENTRACK_SETUP_WIZARD_SNAPSHOT=<dir> saves every page as a PNG
+    // and quits (development aid); the other screenshot/test modes never show it.
+    if (const QString dir = qEnvironmentVariable("OPENTRACK_SETUP_WIZARD_SNAPSHOT"); !dir.isEmpty())
+        QTimer::singleShot(500, this, [this, dir] {
+            show_setup_wizard();
+            wizard_widget->snapshot(dir);
+            QApplication::exit(0);
+        });
+    else if (!setup_wizard::done() && !qEnvironmentVariableIsSet("OPENTRACK_UI_SNAPSHOT")
+             && !qEnvironmentVariableIsSet("OPENTRACK_HEAD_TEST_SNAPSHOT") && !qEnvironmentVariableIsSet("OPENTRACK_VIDEO_FILE"))
+        QTimer::singleShot(700, this, &main_window::show_setup_wizard);
 
 }
 
@@ -1015,6 +1028,7 @@ void main_window::show_options_dialog(bool show)
             st.state = options_dialog::protocol_status::active;
         return st;
     };
+    hooks.run_setup_wizard = [this] { show_setup_wizard(); };
 
     mk_window(options_widget, false,
               embed ? pTrackerDialog : empty_ITD,
@@ -1053,6 +1067,35 @@ void main_window::show_head_test_window()
         });
     }
     head_test_widget->show_beside(this);
+}
+
+void main_window::show_setup_wizard()
+{
+    if (wizard_widget && wizard_widget->isVisible())
+    {
+        wizard_widget->raise();
+        wizard_widget->activateWindow();
+        return;
+    }
+    setup_wizard::hooks h;
+    h.is_tracking = [this] { return !!work; };
+    h.start_tracking = [this] { start_tracker_(); };
+    h.stop_tracking = [this] { stop_tracker_(); };
+    h.raw_pose = [this](double* raw) {
+        if (!work)
+            return false;
+        double mapped[6];
+        work->pipeline_.raw_and_mapped_pose(mapped, raw);
+        return true;
+    };
+    // like a tap of the Center hotkey: press sets a one-shot center, release only ends the "held" part
+    h.center = [this] { if (work) { work->pipeline_.set_held_center(true); work->pipeline_.set_held_center(false); } };
+    h.show_test_window = [this] { show_head_test_window(); };
+    h.pause_keybindings = [this](bool pause) { set_keys_enabled(!pause); };
+    wizard_widget = std::make_unique<setup_wizard>(std::move(h));
+    wizard_widget->show();
+    wizard_widget->raise();
+    wizard_widget->activateWindow();
 }
 
 void main_window::exit(int status)

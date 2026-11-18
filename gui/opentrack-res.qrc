@@ -12,5 +12,7 @@
     <file>images/filter-16.png</file>
     <file>images/tracking-not-started.png</file>
     <file>images/english.png</file>
+    <file>images/setup-sensor-top.png</file>
+    <file>images/setup-sensor-bottom.png</file>
   </qresource>
 </RCC>

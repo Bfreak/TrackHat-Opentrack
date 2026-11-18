@@ -53,6 +53,8 @@ The branch was merged (real 3-way merge, history preserved) into the 2026.1.0 re
   names are macros in `<windows.h>`). Numeric values are unchanged, so saved profiles stay valid.
 - ps3eye submodule and MSVC `sdk-paths-*` files use upstream's versions (not used by the TrackHat build).
 - `todo.md` and the personal todo commits were not carried over.
+- **First-run setup wizard (2026-11-18)**: Trackhat-only, `opentrack/setup-wizard.*` and `gui/key-capture.*`;
+  Options gets a "Setup wizard..." button. Details in `SETUP-WIZARD.md`.
 - **Windows runtime DLLs (2026-11-17)**: the 2026.1 beta crashed on Start.
   - `onnxruntime.dll` is installed into `modules\` (`tracker-neuralnet/CMakeLists.txt`); `env.cpp` loads it from
     there and upstream installed it next to the exe.

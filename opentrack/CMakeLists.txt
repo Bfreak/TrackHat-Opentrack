@@ -27,6 +27,7 @@ target_link_libraries(${self} PRIVATE
     opentrack-pose-widget
     opentrack-head-test
     opentrack-version
+    opentrack-video
 )
 
 if(APPLE)

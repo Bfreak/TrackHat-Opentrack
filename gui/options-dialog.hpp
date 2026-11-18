@@ -33,6 +33,8 @@ public:
         std::vector<std::shared_ptr<dylib>> protocols;
         std::function<void(const QString& module_name)> show_settings;
         std::function<protocol_status(const QString& module_name)> status;
+        // Trackhat: "Setup wizard..." button at the bottom left (first-run wizard, opentrack/setup-wizard.cpp)
+        std::function<void()> run_setup_wizard;
     };
 
     options_dialog(std::unique_ptr<ITrackerDialog>& tracker_dialog_,

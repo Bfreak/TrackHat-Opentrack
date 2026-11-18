@@ -223,6 +223,15 @@ options_dialog::options_dialog(std::unique_ptr<ITrackerDialog>& tracker_dialog_,
 
     connect(ui.buttonBox, &QDialogButtonBox::accepted, this, &options_dialog::accept);
     connect(ui.buttonBox, &QDialogButtonBox::rejected, this, &options_dialog::reject);
+
+    // Trackhat: run the first-run setup wizard again
+    if (proto_hooks.run_setup_wizard)
+    {
+        QPushButton* wizard = ui.buttonBox->addButton(tr("Setup wizard..."), QDialogButtonBox::HelpRole);
+        wizard->setToolTip(tr("Go through the first-run setup again: sensor placement, head center, hotkeys and curve presets."));
+        connect(wizard, &QPushButton::clicked, this, [this] { proto_hooks.run_setup_wizard(); });
+    }
+
     connect(this, &options_dialog::accepted, this, &options_dialog::doAccept);
     connect(this, &options_dialog::rejected, this, &options_dialog::doReject);
 }

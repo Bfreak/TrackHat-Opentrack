@@ -105,3 +105,17 @@ spline_detail--spline_widget {
     qproperty-plotColor: #1C1730; qproperty-plotDisabledColor: #15151A;
     qproperty-gridColor: rgba(167, 139, 250, 70); qproperty-gridDisabledColor: rgba(120, 120, 130, 40);
 }
+
+/* Trackhat: first-run setup wizard (opentrack/setup-wizard.cpp) */
+setup_wizard #wizardTitle { font-size: 17pt; font-weight: 700; color: #FFFFFF; }
+setup_wizard #wizardStep { color: #A78BFA; font-weight: 600; }
+setup_wizard #wizardHeading { font-size: 12pt; font-weight: 600; color: #FFFFFF; }
+setup_wizard #wizardMuted { color: #9A9AA8; }
+setup_wizard #wizardCard { background: #17171E; border: 1px solid #262630; border-radius: 10px; }
+setup_wizard #wizardImage { background: #EEECEC; border-radius: 8px; padding: 0px; }
+setup_wizard #wizardOk { color: #4ADE80; font-weight: 600; }
+setup_wizard #wizardWarn { color: #FBBF24; font-weight: 600; }
+setup_wizard #wizardKey { background: #0B0B0F; border: 1px solid #2E2E3A; border-radius: 6px; padding: 4px 10px; font-weight: 600; }
+setup_wizard #wizardPrimary { background: #8B5CF6; border-color: #8B5CF6; color: #FFFFFF; font-weight: 600; padding: 7px 18px; }
+setup_wizard #wizardPrimary:hover { background: #9D74F8; border-color: #B79CFA; }
+setup_wizard #wizardPrimary:disabled { background: #241F35; border-color: #241F35; color: #6E6886; }

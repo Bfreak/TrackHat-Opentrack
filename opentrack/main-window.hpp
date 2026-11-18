@@ -38,6 +38,7 @@
 
 class update_query;
 class head_test_window;
+class setup_wizard;
 
 class main_window final : public QMainWindow, private State
 {
@@ -63,6 +64,7 @@ class main_window final : public QMainWindow, private State
     std::unique_ptr<options_dialog> options_widget;
     std::unique_ptr<mapping_dialog> mapping_widget;
     std::unique_ptr<head_test_window> head_test_widget;
+    std::unique_ptr<setup_wizard> wizard_widget;      // Trackhat: first-run setup
 
     std::unique_ptr<IFilterDialog> pFilterDialog;
     // Trackhat: one settings window per output protocol, opened from Options > Protocols
@@ -126,6 +128,7 @@ public:
     void show_options_dialog(bool show);
     void show_mapping_window();
     void show_head_test_window();
+    void show_setup_wizard();
 
     void show_pose();
     void show_pose_(const double* mapped, const double* raw);
