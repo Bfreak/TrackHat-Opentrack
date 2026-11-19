@@ -33,8 +33,10 @@ images `gui/images/setup-sensor-{top,bottom}.png`, styles at the end of `gui/the
 6. **Deadzones**: two sliders, turning and moving: none, 10%, 20%, 30% of the preset's bend (its first point;
    20 deg/cm for 1:1), as a first point (deadzone, 0) on every curve of the group. Starts on 10%. Finish saves.
 
-Window: fixed 900x800, 11pt text (22pt title), placed once on the left of the screen and then left where the user
-puts it.
+Window: fixed 900x800, 11pt text (22pt title). Owned by the main window (always in front of it) and placed once,
+right beside the main window on its screen; after that it stays where the user puts it. (Placed at the far left of
+the screen until 2026-11-19, it went unseen on the owner's 5120 px ultrawide. The "done" flag is only set when the
+wizard itself is closed, so quitting the app with it unseen shows it again next start.)
 
 ## Presets
 The owner's curves (2026-11-18), read off his Mapping screenshots (input -> output):

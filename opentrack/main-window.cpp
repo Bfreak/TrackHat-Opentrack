@@ -1092,10 +1092,12 @@ void main_window::show_setup_wizard()
     h.center = [this] { if (work) { work->pipeline_.set_held_center(true); work->pipeline_.set_held_center(false); } };
     h.show_test_window = [this] { show_head_test_window(); };
     h.pause_keybindings = [this](bool pause) { set_keys_enabled(!pause); };
-    wizard_widget = std::make_unique<setup_wizard>(std::move(h));
+    // owned by the main window: always in front of it, and placed right beside it (setup_wizard::place_initially)
+    wizard_widget = std::make_unique<setup_wizard>(std::move(h), this);
     wizard_widget->show();
     wizard_widget->raise();
     wizard_widget->activateWindow();
+    QApplication::alert(wizard_widget.get());   // flashes the taskbar if Windows keeps it from the foreground
 }
 
 void main_window::exit(int status)

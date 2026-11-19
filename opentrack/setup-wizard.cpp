@@ -787,10 +787,24 @@ void setup_wizard::showEvent(QShowEvent* e)
 
 void setup_wizard::place_initially()
 {
-    // the test window takes the right of the screen (head_test_window::show_beside); start on the left
-    QScreen* s = screen() ? screen() : QGuiApplication::primaryScreen();
+    // Right beside the main window (its left side), on its screen, so it can't be missed: on a 5120 px wide
+    // screen the far left edge was out of view or under other windows (owner's clean install, 2026-11-19).
+    // The test window takes the right of the screen (head_test_window::show_beside), so the left side is free.
+    QWidget* anchor = parentWidget() && parentWidget()->isVisible() ? parentWidget()->window() : nullptr;
+    QScreen* s = anchor && anchor->screen() ? anchor->screen() : screen() ? screen() : QGuiApplication::primaryScreen();
     const QRect avail = s->availableGeometry();
-    move(avail.left() + avail.width() / 40, avail.top() + std::max(0, (avail.height() - height()) / 2));
+    const QSize sz = frameGeometry().size().isValid() && frameGeometry().width() > width() ? frameGeometry().size() : size() + QSize(16, 39);
+    QPoint pos;
+    if (anchor)
+    {
+        const QRect a = anchor->frameGeometry();
+        pos = QPoint(a.left() - sz.width() - 12, a.top() + (a.height() - sz.height()) / 2);
+    }
+    else
+        pos = QPoint(avail.left() + (avail.width() - sz.width()) / 2, avail.top() + (avail.height() - sz.height()) / 2);
+    pos.setX(std::clamp(pos.x(), avail.left(), std::max(avail.left(), avail.right() - sz.width())));
+    pos.setY(std::clamp(pos.y(), avail.top(), std::max(avail.top(), avail.bottom() - sz.height())));
+    move(pos);
 }
 
 // ---------------------------------------------------------------------------------------------
