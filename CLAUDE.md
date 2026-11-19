@@ -62,6 +62,9 @@ and hand back something runnable. Prefer finished, tested artifacts over explana
   `OPENTRACK_UI_SNAPSHOT_SWAP_CAMERA=<name part>` also switches the camera while tracking. `qDebug` output is not
   visible in this build; `start_tracker_()` blocks the UI for ~8 s while the sensor opens, so schedule test steps after it.
 - The local build has no vJoy and no OSC; a change that touches them needs a CI run.
+- **HKCU is virtualised for processes Claude starts** (the desktop app is MSIX-packaged): registry reads/deletes from a
+  Claude shell don't reach the owner's real settings. Use a `.bat` started through Explorer for real registry work and
+  for "what the owner sees" launches. See "Registry is virtualised" in `docs/trackhat/GITHUB-AND-ENVIRONMENT.md`.
 
 ## VS Code workflow (from 2026-11-12)
 - The owner works in VS Code with the Claude Code extension, in this repo folder.

@@ -107,6 +107,10 @@ owner whether to move the `3.3` tag or tag `3.3.1`.
 start straight from 0, axis pictures, new deadzone step, X inverted by default, Accela defaults from the owner.
 All pages render (checked with `OPENTRACK_SETUP_WIZARD_SNAPSHOT`). Not tried with a person in front of the sensor:
 the head center calibration, hotkey capture from the wizard, and the presets changing the view live. See `SETUP-WIZARD.md`.
+2026-11-19 evening: "doesn't open after a clean install" was not a code bug. The owner's real registry still had
+`trackhat-setup-wizard-done=true`, because the earlier clean-ups ran inside the Claude desktop app's virtualised
+registry (see `GITHUB-AND-ENVIRONMENT.md`). Real keys removed (backup in `cleanup-backup-2026-11-19-real`),
+5e36957 reinstalled, and the wizard checked to open when started from the Start menu shortcut through Explorer.
 
 ## Known rough edges (noticed, not fixed)
 - Start still takes ~4 s with the sensor (measured 2026-11-18, timing marks in the app): camera open ~1 s, then the

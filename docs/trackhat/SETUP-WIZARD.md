@@ -38,6 +38,11 @@ right beside the main window on its screen; after that it stays where the user p
 the screen until 2026-11-19, it went unseen on the owner's 5120 px ultrawide. The "done" flag is only set when the
 wizard itself is closed, so quitting the app with it unseen shows it again next start.)
 
+The flag survives uninstall/reinstall (the installer doesn't touch HKCU), like every opentrack setting, so an
+update doesn't show the wizard again. To see it again, delete `trackhat-setup-wizard-done` or use Options > Setup
+wizard. When testing from Claude Code in the desktop app, see "Registry is virtualised" in `GITHUB-AND-ENVIRONMENT.md`:
+the 2026-11-19 "wizard doesn't open after a clean install" reports were the real registry still having the flag.
+
 ## Presets
 The owner's curves (2026-11-18), read off his Mapping screenshots (input -> output):
 

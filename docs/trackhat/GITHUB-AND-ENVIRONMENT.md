@@ -25,6 +25,19 @@ ever goes back upstream (no pushes, no PRs).
   `git remote add upstream https://github.com/opentrack/opentrack.git && git remote set-url --push upstream DISABLED`
   and `gh repo set-default Bfreak/TrackHat-Opentrack`.
 
+## Registry is virtualised for Claude Code in the desktop app (owner's PC)
+The Claude desktop app is a packaged (MSIX) Windows app. Every process it starts (PowerShell, `reg`, and opentrack
+itself when launched from there) sees a **private copy of HKCU**: reads fall through to the real registry until the
+first write, writes and deletes stay private. So `Remove-Item HKCU:\Software\trackhat-v3` from a Claude shell does
+nothing to what the owner's opentrack sees, and an opentrack started from a Claude shell doesn't see the owner's
+settings. Found 2026-11-19: the setup wizard "never opened" because the real `trackhat-setup-wizard-done` was still set.
+- To read or change the **real** HKCU, put the `reg query` / `reg export` / `reg delete` commands in a `.bat` and
+  start it through Explorer: `Start-Process explorer.exe -ArgumentList '"C:\path\script.bat"'`; have it write its
+  output to a file under Documents.
+- To test what the owner gets, start opentrack the same way (through Explorer, e.g. the Start menu `.lnk`). It
+  then has no foreground rights, so its windows may sit behind others in screenshots.
+- Files are not affected (Documents, Program Files); installers/uninstallers run elevated, outside the package.
+
 ## Cloud sandbox (only if a session runs there)
 - GitHub access is a repo-scoped allowlist via the session proxy; attach `Bfreak/TrackHat-Opentrack` with `add_repo`.
 - Don't try to bypass the proxy policy (curl with tokens, alternate hosts). Report the denial instead.
