@@ -53,6 +53,10 @@ The branch was merged (real 3-way merge, history preserved) into the 2026.1.0 re
   names are macros in `<windows.h>`). Numeric values are unchanged, so saved profiles stay valid.
 - ps3eye submodule and MSVC `sdk-paths-*` files use upstream's versions (not used by the TrackHat build).
 - `todo.md` and the personal todo commits were not carried over.
+- **Default X invert (2026-11-19)**: `spline/axis-opts.cpp` defaults `x-invert-sign` to true; with the TrackHat
+  sensor, X moved the wrong way in the owner's test (the tracker maps image right to +X, as upstream does).
+- **Accela defaults (2026-11-19)**: smoothing 2.15 deg / 1.3 mm, deadzone 0.17 deg / 0.85 mm
+  (`filter-accela/accela-settings.hpp`; upstream 1.5 / 1.0 / 0.03 / 0.1).
 - **First-run setup wizard (2026-11-18)**: Trackhat-only, `opentrack/setup-wizard.*` and `gui/key-capture.*`;
   Options gets a "Setup wizard..." button. Details in `SETUP-WIZARD.md`.
 - **Windows runtime DLLs (2026-11-17)**: the 2026.1 beta crashed on Start.

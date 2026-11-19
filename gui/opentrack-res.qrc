@@ -14,5 +14,8 @@
     <file>images/english.png</file>
     <file>images/setup-sensor-top.png</file>
     <file>images/setup-sensor-bottom.png</file>
+    <file>images/setup-logo.png</file>
+    <file>images/setup-axes-rotation.png</file>
+    <file>images/setup-axes-position.png</file>
   </qresource>
 </RCC>

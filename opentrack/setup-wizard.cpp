@@ -16,6 +16,7 @@
 #include <QProgressBar>
 #include <QPushButton>
 #include <QScreen>
+#include <QShowEvent>
 #include <QSlider>
 #include <QStyle>
 #include <QStackedWidget>
@@ -129,27 +130,40 @@ private:
 
 const std::array<setup_wizard::preset, 4>& setup_wizard::presets()
 {
-    // Curves supplied by the owner (2026-11-18), measured from his Mapping window screenshots.
+    // Curves supplied by the owner (2026-11-18), measured from his Mapping window screenshots. The small
+    // first point of each was dropped on 2026-11-19 so they start straight from 0; deadzones are step 6.
     static const std::array<preset, 4> ret {{
         { QT_TR_NOOP("1:1"),    {} },
-        { QT_TR_NOOP("Mild"),   { { 1.5, 1.5 }, { 25, 31.5 }, { 100, 180 } } },
-        { QT_TR_NOOP("Medium"), { { 3, 4.5 }, { 21, 35 }, { 63.5, 180 } } },
-        { QT_TR_NOOP("Strong"), { { 1.25, 2.75 }, { 15.5, 39.5 }, { 40.5, 180 } } },
+        { QT_TR_NOOP("Mild"),   { { 25, 31.5 }, { 100, 180 } } },
+        { QT_TR_NOOP("Medium"), { { 21, 35 }, { 63.5, 180 } } },
+        { QT_TR_NOOP("Strong"), { { 15.5, 39.5 }, { 40.5, 180 } } },
     }};
     return ret;
 }
 
-QList<QPointF> setup_wizard::fit_preset(const preset& p, double max_in, double max_out)
+const std::array<int, 4>& setup_wizard::deadzones()
 {
-    if (p.points.empty())
+    static const std::array<int, 4> ret { 0, 10, 20, 30 };
+    return ret;
+}
+
+QList<QPointF> setup_wizard::fit_curve(const preset& p, int deadzone_percent, double max_in, double max_out)
+{
+    std::vector<QPointF> pts = p.points;
+    // the deadzone is a percentage of the preset's bend (its first point); 1:1 has none, so 20 deg / cm
+    const double bend = pts.empty() ? 20 : pts.front().x();
+    if (pts.empty())
     {
         // 1:1 up to the end of the axis range
         const double m = std::min(max_in, max_out);
-        return { QPointF(m, m) };
+        pts.push_back(QPointF(m, m));
     }
+    if (deadzone_percent > 0)
+        pts.insert(pts.begin(), QPointF(std::round(bend * deadzone_percent / 10.) / 10, 0));
+
     QList<QPointF> ret;
     QPointF prev(0, 0);
-    for (const QPointF& pt : p.points)
+    for (const QPointF& pt : pts)
     {
         if (pt.x() <= max_in && pt.y() <= max_out)
         {
@@ -209,7 +223,8 @@ setup_wizard::setup_wizard(hooks h_, QWidget* parent) :
     setWindowTitle(tr("TrackHat setup"));
     setWindowFlag(Qt::WindowContextHelpButtonHint, false);
     setModal(false);
-    resize(740, 640);
+    // fixed size: the pages are laid out for it (larger text, see midnight.qss)
+    setFixedSize(900, 800);
 
     static const char* const spline_names[6] = { "spline-X", "spline-Y", "spline-Z", "spline-yaw", "spline-pitch", "spline-roll" };
     for (int i = 0; i < 6; i++)
@@ -252,6 +267,7 @@ setup_wizard::setup_wizard(hooks h_, QWidget* parent) :
     build_hotkeys();
     build_presets(true);
     build_presets(false);
+    build_deadzone();
 
     connect(&sensor_timer, &QTimer::timeout, this, &setup_wizard::refresh_sensor_status);
     sensor_timer.setInterval(2500);
@@ -276,6 +292,10 @@ void setup_wizard::build_welcome()
     auto* l = new QVBoxLayout(w);
     l->setSpacing(14);
     l->addStretch(1);
+    auto* logo = new QLabel;
+    logo->setPixmap(QPixmap(QStringLiteral(":/images/setup-logo.png")));
+    l->addWidget(logo, 0, Qt::AlignLeft);
+    l->addSpacing(6);
     l->addWidget(label(tr("Welcome to TrackHat"), "wizardTitle"));
     l->addWidget(label(tr("This short setup gets your head tracking working well in about five minutes:")));
     l->addWidget(label(tr("<ol style='margin-left:-20px'>"
@@ -283,7 +303,8 @@ void setup_wizard::build_welcome()
                           "<li>Calibrate your head center</li>"
                           "<li>Choose your center and pause hotkeys</li>"
                           "<li>Pick how far the view turns when you turn your head</li>"
-                          "<li>Pick how far the view moves when you lean</li></ol>")));
+                          "<li>Pick how far the view moves when you lean</li>"
+                          "<li>Choose your deadzones</li></ol>")));
     l->addWidget(label(tr("Each step can be changed later, and you can run this setup again from Options."), "wizardMuted"));
     l->addSpacing(8);
     auto* row = new QHBoxLayout;
@@ -471,9 +492,11 @@ void setup_wizard::build_hotkeys()
 void setup_wizard::build_presets(bool rotation)
 {
     const int k = rotation ? 1 : 0;
+    detect_curves(rotation);
+
     auto* w = new QWidget;
     auto* l = new QVBoxLayout(w);
-    l->setSpacing(10);
+    l->setSpacing(9);
     if (rotation)
     {
         l->addWidget(label(tr("Turning: yaw, pitch and roll"), "wizardHeading"));
@@ -488,26 +511,32 @@ void setup_wizard::build_presets(bool rotation)
                               "lean round a pillar or closer to an instrument. <b>1:1</b> moves it exactly as far as "
                               "your head moves; the other presets move it further.")));
     }
-    l->addWidget(label(tr("The <b>test window</b> has opened beside this one. Look at the screen and press "
-                          "<b>Center</b> first, then %1 and move the slider to compare.")
-                       .arg(rotation ? tr("turn your head") : tr("lean and move your head"))));
+
+    auto* pic = new QLabel;
+    pic->setPixmap(QPixmap(rotation ? QStringLiteral(":/images/setup-axes-rotation.png")
+                                    : QStringLiteral(":/images/setup-axes-position.png")));
+    pic->setAlignment(Qt::AlignCenter);
+    l->addWidget(pic);
 
     auto* row = new QHBoxLayout;
+    auto* hint = label(tr("Look at the screen and press <b>Center</b>, then %1 and move the slider. "
+                          "The <b>test window</b> shows the result.")
+                       .arg(rotation ? tr("turn your head") : tr("lean and move your head")));
     auto* center = new QPushButton(tr("Center"));
     center->setToolTip(tr("Look straight at the screen, then press this."));
     auto* test = new QPushButton(tr("Show test window"));
+    row->addWidget(hint, 1);
     row->addWidget(center);
     row->addWidget(test);
-    row->addStretch(1);
     l->addLayout(row);
     connect(center, &QPushButton::clicked, this, [this] { if (h.center) h.center(); });
-    connect(test, &QPushButton::clicked, this, [this] { if (h.show_test_window) h.show_test_window(); place_beside_test_window(); });
+    connect(test, &QPushButton::clicked, this, [this] { if (h.show_test_window) h.show_test_window(); });
 
     auto* card = new QWidget;
     card->setObjectName("wizardCard");
     card->setAttribute(Qt::WA_StyledBackground);
     auto* cl = new QVBoxLayout(card);
-    cl->setContentsMargins(14, 10, 14, 12);
+    cl->setContentsMargins(14, 8, 14, 10);
     auto* top = new QHBoxLayout;
     top->addWidget(new QLabel(tr("Preset:")));
     preset_name[k] = label({}, "wizardHeading");
@@ -516,7 +545,7 @@ void setup_wizard::build_presets(bool rotation)
     auto* slider = new QSlider(Qt::Horizontal);
     slider->setRange(0, int(presets().size()) - 1);
     slider->setPageStep(1);
-    slider->setTickPosition(QSlider::NoTicks);
+    slider->setValue(std::max(sel_preset[k], 0));
     preset_slider[k] = slider;
     cl->addWidget(slider);
     // labels under the slider stops: the end ones take half a cell, so the middle ones centre on their stop
@@ -533,26 +562,81 @@ void setup_wizard::build_presets(bool rotation)
     cl->addLayout(ticks);
     preview[k] = new curve_preview(card);
     cl->addWidget(preview[k], 1);
-    preset_note[k] = label({}, "wizardMuted");
+    preset_note[k] = label(rotation ? tr("Shown: yaw. Pitch and roll get the same curve, cut off at their own range.")
+                                    : tr("Shown: left/right. Up/down and forward/back get the same curve."), "wizardMuted");
     cl->addWidget(preset_note[k]);
     l->addWidget(card, 1);
 
     if (!rotation)
         l->addWidget(label(tr("These presets are only a starting point. You can fine-tune every axis later with "
-                              "<b>Mapping</b> (the curve editor) and check the result with <b>Test head tracking</b>, "
-                              "both on the main window.")));
+                              "<b>Mapping</b> (the curve editor) and check it with <b>Test head tracking</b>.")));
 
-    const int start = matching_preset(rotation);
-    slider->setValue(std::max(start, 0));
-    connect(slider, &QSlider::valueChanged, this, [this, rotation](int v) { apply_preset(rotation, v); });
-    // show the selected (or current) curve without writing anything until the slider moves
-    const int shown = std::max(start, 0);
-    const axis_opts& o = *main.all_axis_opts[rotation ? Yaw : TX];
-    preset_name[k]->setText(start >= 0 ? tr(presets()[shown].name) : tr("Your own curves (unchanged until you move the slider)"));
-    preview[k]->set(start >= 0 ? fit_preset(presets()[shown], o.max_clamp_x(), o.max_clamp_y()) : **curves[rotation ? Yaw : TX].points,
-                    o.max_clamp_x(), o.max_clamp_y(), rotation ? tr("degrees") : tr("cm"));
-    preset_note[k]->setText(rotation ? tr("Shown: yaw. Pitch and roll get the same curve, cut off at their own range.")
-                                     : tr("Shown: left/right. Up/down and forward/back get the same curve."));
+    connect(slider, &QSlider::valueChanged, this, [this, rotation, k](int v) {
+        sel_preset[k] = v;
+        apply_curves(rotation);
+    });
+    refresh_curve_views(rotation);
+    pages->addWidget(w);
+}
+
+void setup_wizard::build_deadzone()
+{
+    auto* w = new QWidget;
+    auto* l = new QVBoxLayout(w);
+    l->setSpacing(9);
+    l->addWidget(label(tr("Deadzones"), "wizardHeading"));
+    l->addWidget(label(tr("A deadzone is a small area around the center where head movement doesn't move the game "
+                          "view, so the view stays still while your eyes look around the screen. "
+                          "<b>Most people prefer a small deadzone on both.</b>")));
+    l->addWidget(label(tr("Hold your head still and look around the screen, then make small head movements, and "
+                          "compare in the test window."), "wizardMuted"));
+
+    for (int k : { 1, 0 })
+    {
+        const bool rotation = k == 1;
+        auto* card = new QWidget;
+        card->setObjectName("wizardCard");
+        card->setAttribute(Qt::WA_StyledBackground);
+        auto* cl = new QHBoxLayout(card);
+        cl->setContentsMargins(14, 8, 14, 10);
+        cl->setSpacing(16);
+        auto* left = new QVBoxLayout;
+        left->addWidget(label(rotation ? tr("<b>Turning</b> (yaw, pitch, roll)") : tr("<b>Moving</b> (left/right, up/down, forward/back)")));
+        dz_name[k] = label({}, "wizardHeading");
+        left->addWidget(dz_name[k]);
+        auto* slider = new QSlider(Qt::Horizontal);
+        slider->setRange(0, int(deadzones().size()) - 1);
+        slider->setPageStep(1);
+        slider->setValue(sel_dz[k]);
+        dz_slider[k] = slider;
+        left->addWidget(slider);
+        auto* ticks = new QHBoxLayout;
+        ticks->setSpacing(0);
+        for (int i = 0; i < int(deadzones().size()); i++)
+        {
+            const bool first = i == 0, last = i == int(deadzones().size()) - 1;
+            auto* t = new QLabel(i == 0 ? tr("None") : QStringLiteral("%1%").arg(deadzones()[i]));
+            t->setObjectName("wizardMuted");
+            t->setAlignment(first ? Qt::AlignLeft : last ? Qt::AlignRight : Qt::AlignHCenter);
+            ticks->addWidget(t, first || last ? 1 : 2);
+        }
+        left->addLayout(ticks);
+        left->addStretch(1);
+        cl->addLayout(left, 1);
+        dz_preview[k] = new curve_preview(card);
+        dz_preview[k]->setMinimumSize(330, 150);
+        cl->addWidget(dz_preview[k], 1);
+        l->addWidget(card, 1);
+        connect(slider, &QSlider::valueChanged, this, [this, rotation, k](int v) {
+            sel_dz[k] = v;
+            dz_known[k] = true;
+            apply_curves(rotation);
+        });
+    }
+    l->addWidget(label(tr("The deadzone is a share of where the curve bends, so it suits the preset you picked. "
+                          "You can change it later in <b>Mapping</b>."), "wizardMuted"));
+    refresh_curve_views(true);
+    refresh_curve_views(false);
     pages->addWidget(w);
 }
 
@@ -574,17 +658,32 @@ void setup_wizard::go_to(int p)
     else
         sensor_timer.stop();
 
+    if (p == p_rotation || p == p_position || p == p_deadzone)
+    {
+        if (ensure_tracking() && h.show_test_window)
+            h.show_test_window();
+        raise();
+        activateWindow();
+    }
+    // a profile without curves gets 1:1 written (opentrack's empty X/Y/Z curve is 30 -> 75 cm, not 1:1)
     if (p == p_rotation || p == p_position)
     {
-        if (ensure_tracking())
+        const int k = p == p_rotation ? 1 : 0;
+        if (own_empty[k])
         {
-            if (h.show_test_window)
-                h.show_test_window();
-            place_beside_test_window();
-            raise();
-            activateWindow();
+            own_empty[k] = false;
+            apply_curves(k == 1);
         }
     }
+    // the deadzone step starts on 10% (small) unless the profile already had one of ours
+    if (p == p_deadzone)
+        for (int k : { 1, 0 })
+            if (sel_preset[k] >= 0 && !dz_known[k])
+            {
+                dz_known[k] = true;
+                dz_slider[k]->setValue(1);      // applies through valueChanged
+                if (sel_dz[k] != 1) { sel_dz[k] = 1; apply_curves(k == 1); }
+            }
     update_nav();
 }
 
@@ -593,9 +692,9 @@ void setup_wizard::update_nav()
     const int p = pages->currentIndex();
     nav->setVisible(p != p_welcome);
     step_label->setVisible(p != p_welcome);
-    step_label->setText(tr("Step %1 of 5").arg(p));
+    step_label->setText(tr("Step %1 of %2").arg(p).arg(int(page_count) - 1));
     back_button->setEnabled(p > p_sensor);
-    if (p == p_position)
+    if (p == p_deadzone)
         next_button->setText(tr("Finish"));
     else if (p == p_calibration && !calibrated)
         next_button->setText(tr("Skip"));
@@ -612,7 +711,10 @@ void setup_wizard::next()
     if (p == p_rotation)
         save_presets(true);
     if (p == p_position)
+        save_presets(false);
+    if (p == p_deadzone)
     {
+        save_presets(true);
         save_presets(false);
         finish();
         return;
@@ -672,9 +774,20 @@ bool setup_wizard::ensure_tracking()
     return ok;
 }
 
-void setup_wizard::place_beside_test_window()
+void setup_wizard::showEvent(QShowEvent* e)
 {
-    // the test window takes the right of the screen (head_test_window::show_beside); stay on the left
+    // place once; after that the window stays wherever the user moves it
+    if (!placed)
+    {
+        placed = true;
+        place_initially();
+    }
+    QDialog::showEvent(e);
+}
+
+void setup_wizard::place_initially()
+{
+    // the test window takes the right of the screen (head_test_window::show_beside); start on the left
     QScreen* s = screen() ? screen() : QGuiApplication::primaryScreen();
     const QRect avail = s->availableGeometry();
     move(avail.left() + avail.width() / 40, avail.top() + std::max(0, (avail.height() - height()) / 2));
@@ -905,43 +1018,80 @@ void setup_wizard::refresh_hotkey_labels()
 // ---------------------------------------------------------------------------------------------
 // steps 4, 5
 
-int setup_wizard::matching_preset(bool rotation) const
-{
-    const int lo = rotation ? Yaw : TX, hi = rotation ? Roll : TZ;
-    for (int i = 0; i < int(presets().size()); i++)
-    {
-        bool all = true;
-        for (int a = lo; a <= hi && all; a++)
-        {
-            const axis_opts& o = *main.all_axis_opts[a];
-            const QList<QPointF> want = fit_preset(presets()[i], o.max_clamp_x(), o.max_clamp_y());
-            QList<QPointF> have = **curves[a].points;
-            // an empty curve is a straight line to the end of the range: 1:1 when the ranges match
-            if (have.isEmpty() && std::fabs(o.max_clamp_x() - o.max_clamp_y()) < 1e-6)
-                have = { QPointF(o.max_clamp_x(), o.max_clamp_y()) };
-            all = have.size() == want.size();
-            for (int p = 0; all && p < have.size(); p++)
-                all = std::fabs(have[p].x() - want[p].x()) < 0.15 && std::fabs(have[p].y() - want[p].y()) < 0.15;
-        }
-        if (all)
-            return i;
-    }
-    return -1;
-}
-
-void setup_wizard::apply_preset(bool rotation, int idx)
+void setup_wizard::detect_curves(bool rotation)
 {
     const int k = rotation ? 1 : 0;
+    const int lo = rotation ? Yaw : TX, hi = rotation ? Roll : TZ;
+    bool all_empty = true;
+    for (int a = lo; a <= hi; a++)
+        if (!(**curves[a].points).isEmpty())
+            all_empty = false;
+    if (all_empty)
+    {
+        sel_preset[k] = 0; sel_dz[k] = 0; dz_known[k] = false; own_empty[k] = true;
+        return;
+    }
+    for (int i = 0; i < int(presets().size()); i++)
+        for (int j = 0; j < int(deadzones().size()); j++)
+        {
+            bool all = true;
+            for (int a = lo; a <= hi && all; a++)
+            {
+                const axis_opts& o = *main.all_axis_opts[a];
+                const QList<QPointF> want = fit_curve(presets()[i], deadzones()[j], o.max_clamp_x(), o.max_clamp_y());
+                const QList<QPointF> have = **curves[a].points;
+                all = have.size() == want.size();
+                for (int q = 0; all && q < have.size(); q++)
+                    all = std::fabs(have[q].x() - want[q].x()) < 0.15 && std::fabs(have[q].y() - want[q].y()) < 0.15;
+            }
+            if (all)
+            {
+                sel_preset[k] = i; sel_dz[k] = j; dz_known[k] = true; own_empty[k] = false;
+                return;
+            }
+        }
+    sel_preset[k] = -1; sel_dz[k] = 0; dz_known[k] = true; own_empty[k] = false;   // the user's own: left alone
+}
+
+void setup_wizard::apply_curves(bool rotation)
+{
+    const int k = rotation ? 1 : 0;
+    if (sel_preset[k] < 0)
+        return;
     const int lo = rotation ? Yaw : TX, hi = rotation ? Roll : TZ;
     for (int a = lo; a <= hi; a++)
     {
         const axis_opts& o = *main.all_axis_opts[a];
-        *curves[a].points = fit_preset(presets()[idx], o.max_clamp_x(), o.max_clamp_y());  // live: the mapping follows
+        // live: the running mapping follows these values straight away
+        *curves[a].points = fit_curve(presets()[sel_preset[k]], deadzones()[sel_dz[k]], o.max_clamp_x(), o.max_clamp_y());
     }
     presets_dirty[k] = true;
+    refresh_curve_views(rotation);
+}
+
+void setup_wizard::refresh_curve_views(bool rotation)
+{
+    const int k = rotation ? 1 : 0;
+    const int lo = rotation ? Yaw : TX;
     const axis_opts& o = *main.all_axis_opts[lo];
-    preset_name[k]->setText(tr(presets()[idx].name));
-    preview[k]->set(**curves[lo].points, o.max_clamp_x(), o.max_clamp_y(), rotation ? tr("degrees") : tr("cm"));
+    const QString unit = rotation ? tr("degrees") : tr("cm");
+    QList<QPointF> shown = **curves[lo].points;
+    if (sel_preset[k] >= 0)
+        shown = fit_curve(presets()[sel_preset[k]], deadzones()[sel_dz[k]], o.max_clamp_x(), o.max_clamp_y());
+    if (preset_name[k])
+        preset_name[k]->setText(sel_preset[k] >= 0 ? tr(presets()[sel_preset[k]].name)
+                                                   : tr("Your own curves (unchanged unless you move the slider)"));
+    if (preview[k])
+        preview[k]->set(shown, o.max_clamp_x(), o.max_clamp_y(), unit);
+    if (dz_name[k])
+    {
+        dz_name[k]->setText(sel_preset[k] < 0 ? tr("Your own curves: left as they are")
+                            : sel_dz[k] == 0 ? tr("No deadzone")
+                            : tr("%1% deadzone").arg(deadzones()[sel_dz[k]]));
+        dz_slider[k]->setEnabled(sel_preset[k] >= 0);
+    }
+    if (dz_preview[k])
+        dz_preview[k]->set(shown, o.max_clamp_x(), o.max_clamp_y(), unit);
 }
 
 void setup_wizard::save_presets(bool rotation)
@@ -971,11 +1121,11 @@ void setup_wizard::revert_presets(bool rotation)
 void setup_wizard::snapshot(const QString& dir)
 {
     QDir().mkpath(dir);
-    auto save = [&](const char* name) {
+    auto save = [&](const QString& name) {
         QApplication::processEvents();
-        grab().save(QDir(dir).filePath(QString::fromLatin1(name) + ".png"));
+        grab().save(QDir(dir).filePath(name + ".png"));
     };
-    const auto noop = h;
+    const auto keep = h;
     h.start_tracking = {};                       // screenshots only: don't touch the sensor
     h.show_test_window = {};
     go_to(p_welcome);      save("wizard-0-welcome");
@@ -992,22 +1142,15 @@ void setup_wizard::snapshot(const QString& dir)
     save("wizard-2c-calibrated");
     yaw_bar->setValue(0); pitch_bar->setValue(0); calib_status->clear(); calib_result->clear();
     go_to(p_hotkeys);      save("wizard-3-hotkeys");
-    for (int rotation = 1; rotation >= 0; rotation--)
-    {
-        go_to(rotation ? p_rotation : p_position);
-        const int k = rotation ? 1 : 0;
-        const int was = preset_slider[k]->value();
-        for (int i = 0; i < int(presets().size()); i++)
-        {
-            preset_slider[k]->setValue(i);
-            if (i == was)
-                apply_preset(rotation, i);
-            save(QStringLiteral("wizard-%1-%2-preset%3").arg(rotation ? 4 : 5).arg(rotation ? "rotation" : "position").arg(i).toLatin1().constData());
-        }
-        preset_slider[k]->blockSignals(true);
-        preset_slider[k]->setValue(was);
-        preset_slider[k]->blockSignals(false);
-        revert_presets(rotation);
-    }
-    h = noop;
+    go_to(p_rotation);     save("wizard-4-rotation-initial");
+    for (int i : { 1, 2, 3 }) { preset_slider[1]->setValue(i); save(QStringLiteral("wizard-4-rotation-preset%1").arg(i)); }
+    preset_slider[1]->setValue(2);
+    go_to(p_position);     save("wizard-5-position-initial");
+    for (int i : { 1, 2, 3 }) { preset_slider[0]->setValue(i); save(QStringLiteral("wizard-5-position-preset%1").arg(i)); }
+    preset_slider[0]->setValue(2);
+    go_to(p_deadzone);     save("wizard-6-deadzone-initial");
+    dz_slider[1]->setValue(3); dz_slider[0]->setValue(0); save("wizard-6-deadzone-30-none");
+    revert_presets(true);
+    revert_presets(false);
+    h = keep;
 }

@@ -25,9 +25,16 @@ images `gui/images/setup-sensor-{top,bottom}.png`, styles at the end of `gui/the
    Upstream's own calibration (Tracker tab) has a "FIXME: does not work" comment; this one doesn't use it.
 3. **Hotkeys**: Center (`center`) and Pause/resume (`toggle`), first slot of each; keyboard, mouse, joystick or gamepad
    (same capture dialog as Options > Shortcuts). Saved immediately; the main window re-registers shortcuts on save.
-4. **Rotation preset** and 5. **Position preset**: a slider over 1:1, Mild, Medium, Strong. Moving it writes the
-   curves straight into the live mapping (the test window opens beside the wizard), Next/Finish saves them, closing the
-   wizard puts them back. Untouched sliders write nothing, so custom curves survive a re-run.
+4. **Rotation preset** and 5. **Position preset**: the owner's axis pictures, and a slider over 1:1, Mild, Medium,
+   Strong. Moving it writes the curves straight into the live mapping (the test window opens beside the wizard),
+   Next saves them, closing the wizard puts them back. A profile without curves starts on 1:1 and gets it written
+   (opentrack's empty X/Y/Z curve is 30 -> 75 cm, not 1:1). A profile with its own curves shows "Your own curves"
+   and is left alone unless the slider is moved.
+6. **Deadzones**: two sliders, turning and moving: none, 10%, 20%, 30% of the preset's bend (its first point;
+   20 deg/cm for 1:1), as a first point (deadzone, 0) on every curve of the group. Starts on 10%. Finish saves.
+
+Window: fixed 900x800, 11pt text (22pt title), placed once on the left of the screen and then left where the user
+puts it.
 
 ## Presets
 The owner's curves (2026-11-18), read off his Mapping screenshots (input -> output):
@@ -35,18 +42,21 @@ The owner's curves (2026-11-18), read off his Mapping screenshots (input -> outp
 | Preset | Points |
 |---|---|
 | 1:1 | straight line to the end of the axis range |
-| Mild | (1.5, 1.5) (25, 31.5) (100, 180) |
-| Medium | (3, 4.5) (21, 35) (63.5, 180) |
-| Strong | (1.25, 2.75) (15.5, 39.5) (40.5, 180) |
+| Mild | (25, 31.5) (100, 180) |
+| Medium | (21, 35) (63.5, 180) |
+| Strong | (15.5, 39.5) (40.5, 180) |
 
-`setup_wizard::fit_preset()` fits them to each axis without changing the outputs below the limits: points past the
+The owner's screenshots also had a small first point ((1.5, 1.5), (3, 4.5), (1.25, 2.75)); it was dropped on 2026-11-19
+so the presets start straight from 0, and deadzones moved to step 6.
+
+`setup_wizard::fit_curve()` adds the deadzone and fits them to each axis without changing the outputs below the limits: points past the
 axis' max input or max output are replaced by the point where the curve (straight-line estimate) reaches the limit.
 - Yaw, roll (180 in / 180 out): as listed.
-- Pitch (90 / 90): same curve, ending at 90 deg out (Mild (54.5, 90), Medium (37.1, 90), Strong (24.5, 90)).
+- Pitch (90 / 90): same curve, ending at 90 deg out.
 - X, Y, Z (30 cm in / 75 cm out): the same numbers read as cm (owner's choice), ending at 30 cm in or 75 cm out.
   1:1 is a real 1:1 (30 -> 30 cm); opentrack's empty curve would be 30 -> 75.
 
 ## Not verified
 - The calibration with a real person in front of the sensor (needs someone to move their head).
 - Hotkey capture from the wizard on real keys/buttons (same code path as Options).
-- Screen layouts other than this PC's; very small screens (the wizard is 740x640).
+- Screen layouts other than this PC's; very small screens (the wizard is a fixed 900x800).

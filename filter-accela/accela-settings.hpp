@@ -48,10 +48,12 @@ struct settings_accela : opts
 
     static void make_splines(spline& rot, spline& pos);
 
-    value<slider_value> rot_smoothing { b, "rotation-sensitivity", { 1.5, .05, 2.5 } },
-                        pos_smoothing { b, "translation-sensitivity", { 1., .05, 1.5 } },
-                        rot_deadzone { b, "rotation-deadzone", { .03, 0, .2 } },
-                        pos_deadzone { b, "translation-deadzone", { .1, 0, 1 } };
+    // Trackhat defaults (2026-11-19): smoothing 2.15 deg / 1.3 mm, deadzone 0.17 deg / 0.85 mm
+    // (upstream 1.5 / 1.0 / 0.03 / 0.1). Ranges unchanged.
+    value<slider_value> rot_smoothing { b, "rotation-sensitivity", { 2.15, .05, 2.5 } },
+                        pos_smoothing { b, "translation-sensitivity", { 1.3, .05, 1.5 } },
+                        rot_deadzone { b, "rotation-deadzone", { .17, 0, .2 } },
+                        pos_deadzone { b, "translation-deadzone", { .85, 0, 1 } };
 
     settings_accela() : opts("accela-sliders") {}
 };

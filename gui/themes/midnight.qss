@@ -107,9 +107,10 @@ spline_detail--spline_widget {
 }
 
 /* Trackhat: first-run setup wizard (opentrack/setup-wizard.cpp) */
-setup_wizard #wizardTitle { font-size: 17pt; font-weight: 700; color: #FFFFFF; }
+setup_wizard QWidget { font-size: 11pt; }
+setup_wizard #wizardTitle { font-size: 22pt; font-weight: 700; color: #FFFFFF; }
 setup_wizard #wizardStep { color: #A78BFA; font-weight: 600; }
-setup_wizard #wizardHeading { font-size: 12pt; font-weight: 600; color: #FFFFFF; }
+setup_wizard #wizardHeading { font-size: 14pt; font-weight: 600; color: #FFFFFF; }
 setup_wizard #wizardMuted { color: #9A9AA8; }
 setup_wizard #wizardCard { background: #17171E; border: 1px solid #262630; border-radius: 10px; }
 setup_wizard #wizardImage { background: #EEECEC; border-radius: 8px; padding: 0px; }

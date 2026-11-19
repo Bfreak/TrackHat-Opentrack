@@ -102,7 +102,9 @@ owner whether to move the `3.3` tag or tag `3.3.1`.
 - Performance of the test window on integrated graphics; machines without OpenGL 3.3. Linux: the 2026-11-16 build ran only
   headless (no camera, no Wine/X-Plane outputs built). macOS: never built.
 
-## First-run setup wizard - BUILT 2026-11-18, NEEDS THE OWNER'S LIVE TEST
+## First-run setup wizard - BUILT 2026-11-18, REVISED 2026-11-19, NEEDS THE OWNER'S LIVE TEST
+2026-11-19 (owner's first test): logo, fixed size and larger text, keeps its position, presets start on 1:1 and
+start straight from 0, axis pictures, new deadzone step, X inverted by default, Accela defaults from the owner.
 All pages render (checked with `OPENTRACK_SETUP_WIZARD_SNAPSHOT`). Not tried with a person in front of the sensor:
 the head center calibration, hotkey capture from the wizard, and the presets changing the view live. See `SETUP-WIZARD.md`.
 

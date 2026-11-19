@@ -5,7 +5,10 @@ Trackhat features are carried over, with upstream's improvements since then.
 
 ## What you'll notice
 - **First-run setup wizard**: sensor placement, head center calibration, center/pause hotkeys, and turning/moving
-  curve presets (1:1, Mild, Medium, Strong) tried live in the test window. Run it again from Options > Setup wizard.
+  curve presets (1:1, Mild, Medium, Strong) tried live in the test window, and deadzones. Run it again from
+  Options > Setup wizard.
+- New defaults: X axis inverted (moved the wrong way with the sensor); smoother filter (Accela smoothing 2.15 deg /
+  1.3 mm, deadzone 0.17 deg / 0.85 mm).
 - Default head-pose model is now `head-pose-0.5-small` (was 0.2-small). 0.2-small still ships, so existing profiles keep working.
 - Better tracking robustness: auto-centring, reports lost tracking, no pose output before the first detection (replaces Trackhat's own workaround).
 - Roll computation uses upstream's fixed version (fixed upstream in 2023 and 2025).
