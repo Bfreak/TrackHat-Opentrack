@@ -71,7 +71,9 @@ The branch was merged (real 3-way merge, history preserved) into the 2026.1.0 re
     that the installed vJoy driver put in `Program Files\vJoy\x64` (path from the vJoy uninstall registry key). The
     SDK copy from opentrack-depends corrupted the heap with driver 2.1.9.1. MinGW builds still link and ship it.
 - Version string comes from `trackhat-opentrack-*` tags (`cmake/opentrack-version.cmake`), and the update check
-  compares version numbers (only newer releases are offered) instead of exact strings.
+  compares version numbers (only newer releases are offered) instead of exact strings. Since 2026.1-beta2,
+  pre-releases of the same version are ordered too: alpha < beta < rc, then by number ("-beta" = 1), so the site
+  can announce e.g. beta3 to beta2 users. (Beta 1 builds still treat all 2026.1 pre-releases as equal.)
 
 ## Upstream fixes after 2026.1.0 that were cherry-picked
 

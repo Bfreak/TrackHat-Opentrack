@@ -1,12 +1,23 @@
-# Status (as of 2026-11-12)
+# Status (as of 2026-11-20)
 
-Read this first, then `CLAUDE.md`. Everything below is the true state at the end of the last session.
+Read this first, then `CLAUDE.md`. The top sections are current; sections further down are dated history.
 
 ## Goal
-Trackhat's custom OpenTrack, rebuilt on OpenTrack 2026.1.0 and released as **Trackhat OpenTrack 3.3**.
-The owner (James) is not a C++ developer: Claude builds, tests and hands back something runnable.
+Trackhat's custom OpenTrack, rebuilt on OpenTrack 2026.1.0 and released as **TrackHat opentrack 2026.1**
+(the earlier "3.3" name was dropped). The owner (James) is not a C++ developer: Claude builds, tests and hands back
+something runnable.
 
-## Where things are
+## Now: 2026.1 Beta 2 for beta testers (2026-11-20)
+- `trackhat-setup-wizard` merged into `trackhat-2026.1` (fast-forward) and tagged `trackhat-opentrack-2026.1-beta2`.
+- GitHub release "TrackHat opentrack 2026.1 Beta 2" (pre-release) created as a **draft** with the CI installer and
+  portable zip; text = `RELEASE-NOTES-2026.1-beta2.md`. The owner publishes it and sends testers the link.
+- trackhat.org advertises `trackhat-opentrack-3.2`, so no 2026.1 build shows an update prompt; leave it for the
+  beta. Beta 1 builds can't be notified of Beta 2 by the site (same version number); from Beta 2 on they can.
+- The owner has used CI installers of this branch on this Windows 11 PC with the sensor (setup wizard, presets,
+  tracking); see the sections below for what is still untested.
+- `trackhat-mediapipe-prototype` doesn't have the setup wizard, the new defaults or "starting..." yet.
+
+## Where things are (older notes, 2026-11-12)
 - **Repo:** `Documents\TrackHatOpentrackProject\opentrack-trackhat` on the owner's Windows 11 PC.
   Remote `origin` = https://github.com/Bfreak/TrackHat-Opentrack (push here). Remote `upstream` = opentrack/opentrack, fetch-only
   (push URL `DISABLED`); `gh` defaults to the fork. Branch layout and rules: `GITHUB-AND-ENVIRONMENT.md`.

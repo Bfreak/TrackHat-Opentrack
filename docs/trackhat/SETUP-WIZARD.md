@@ -77,7 +77,10 @@ preset (Strong's ease-in is short, 1:1's long) and with each axis' fitted end. A
 the axis' max input or max output is replaced by the point where the line reaches the limit. Then the deadzone point
 is added relative to that end.
 - Yaw, roll (180 in / 180 out): as listed.
-- Pitch (90 / 90): same curve, ending at 90 deg out.
+- Pitch (90 / 90): 60% as sensitive as yaw in every preset (owner, 2026-11-20: `axis_sensitivity()` scales the
+  outputs by 0.6 before fitting), ending at 90 deg out; 1:1 becomes 90 -> 54. Its deadzone point is placed
+  relative to its own fitted end.
+- The snapshot mode also writes `curves.txt`: every preset and deadzone as fitted to each axis.
 - X, Y, Z (30 cm in / 75 cm out): the same numbers read as cm (owner's choice), ending at 30 cm in or 75 cm out.
   1:1 is a real 1:1 (30 -> 30 cm); opentrack's empty curve would be 30 -> 75.
 

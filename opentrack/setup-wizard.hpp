@@ -58,8 +58,12 @@ public:
     // straight line's output there. x = 0: none, the curve stays straight.
     struct deadzone { const char* name; double x, y; };
     static const std::array<deadzone, 4>& deadzones();
-    // The preset with a deadzone, fitted to an axis: cut at max_in, capped at max_out (outputs unchanged below).
-    static QList<QPointF> fit_curve(const preset& p, const deadzone& dz, double max_in, double max_out);
+    // How sensitive an axis is compared with the preset: 0.6 for pitch (owner, 2026-11-20), 1 for the rest.
+    static double axis_sensitivity(int axis);
+    // The preset with a deadzone, fitted to an axis: outputs times `sensitivity`, cut at max_in, capped at max_out
+    // (outputs unchanged below).
+    static QList<QPointF> fit_curve(const preset& p, const deadzone& dz, double max_in, double max_out,
+                                    double sensitivity = 1);
 
 signals:
     void wizard_closed();

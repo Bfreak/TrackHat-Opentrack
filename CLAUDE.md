@@ -47,10 +47,11 @@ and hand back something runnable. Prefer finished, tested artifacts over explana
 - Don't route around permission/policy denials (GitHub proxy, sandbox network allowlist). Report them and ask.
 
 ## Not verified yet (be honest about this in reports)
-- Nothing has run on **real Windows** or with a **real Trackhat sensor**. Windows build only smoke-tested under Wine (GUI opens, update check works).
-- Exposure presets on real hardware, and tracking quality of the 0.5-small model, are untested.
-- The MSVC build and Inno Setup installer from CI (`.github/workflows/trackhat-windows.yml`) compile and package,
-  but haven't been launched on real Windows yet.
+- Since 2026-11-17 the CI installer runs on the owner's real Windows 11 PC with a real TrackHat sensor, and the owner
+  has tried the setup wizard and presets (2026-11-19). Only this one PC and sensor so far: beta testers (2026.1 Beta 2)
+  are the first other machines.
+- Not systematically checked: exposure presets on hardware, the head center calibration's accuracy, every output
+  protocol with real games, other screen layouts.
 
 ## Building on this PC
 - `scripts/windows-local/build.bat` builds and installs to `../build-local/install` (deps in `../deps`,

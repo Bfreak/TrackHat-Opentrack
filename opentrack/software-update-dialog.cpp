@@ -12,18 +12,26 @@ struct th_version
 {
     QVersionNumber number;
     bool prerelease = false;
+    int stage = 0;      // pre-releases: alpha 1, beta 2, rc 3
+    int stage_no = 0;   // "-beta2" -> 2; "-beta" counts as 1
     bool valid = false;
 };
 
 th_version parse_th_version(const QString& s)
 {
-    static const QRegularExpression re(QStringLiteral(R"(^trackhat-opentrack-(\d+(?:\.\d+)*)(-(?:rc|beta|alpha)\d*)?)"));
+    static const QRegularExpression re(QStringLiteral(R"(^trackhat-opentrack-(\d+(?:\.\d+)*)(?:-(rc|beta|alpha)(\d*))?)"));
     th_version v;
     const QRegularExpressionMatch m = re.match(s);
     if (m.hasMatch())
     {
         v.number = QVersionNumber::fromString(m.captured(1));
         v.prerelease = m.hasCaptured(2);
+        if (v.prerelease)
+        {
+            const QString st = m.captured(2);
+            v.stage = st == QLatin1String("alpha") ? 1 : st == QLatin1String("beta") ? 2 : 3;
+            v.stage_no = m.captured(3).isEmpty() ? 1 : m.captured(3).toInt();
+        }
         v.valid = !v.number.isNull();
     }
     return v;
@@ -42,7 +50,14 @@ bool is_newer_release(const QString& advertised, const QString& running)
     const int c = QVersionNumber::compare(adv.number, cur.number);
     if (c != 0)
         return c > 0;
-    return cur.prerelease && !adv.prerelease;  // e.g. running 3.3-rc1, site says 3.3
+    if (cur.prerelease != adv.prerelease)
+        return cur.prerelease;                 // e.g. running 3.3-rc1, site says 3.3
+    if (!cur.prerelease)
+        return false;
+    // both pre-releases of the same version: 2026.1-beta < 2026.1-beta2 < 2026.1-rc1
+    if (adv.stage != cur.stage)
+        return adv.stage > cur.stage;
+    return adv.stage_no > cur.stage_no;
 }
 
 } // namespace

@@ -8,6 +8,8 @@
 #include <QApplication>
 #include <QCloseEvent>
 #include <QDir>
+#include <QFile>
+#include <QTextStream>
 #include <QGuiApplication>
 #include <QHBoxLayout>
 #include <QLabel>
@@ -155,7 +157,15 @@ const std::array<setup_wizard::deadzone, 4>& setup_wizard::deadzones()
     return ret;
 }
 
-QList<QPointF> setup_wizard::fit_curve(const preset& p, const deadzone& dz, double max_in, double max_out)
+double setup_wizard::axis_sensitivity(int axis)
+{
+    // pitch turns the view 60% as far as yaw does for the same head movement, in every preset (owner's
+    // request before the beta, 2026-11-20); looking up/down needs less than looking round
+    return axis == Pitch ? .6 : 1;
+}
+
+QList<QPointF> setup_wizard::fit_curve(const preset& p, const deadzone& dz, double max_in, double max_out,
+                                       double sensitivity)
 {
     std::vector<QPointF> pts = p.points;
     if (pts.empty())
@@ -164,6 +174,8 @@ QList<QPointF> setup_wizard::fit_curve(const preset& p, const deadzone& dz, doub
         const double m = std::min(max_in, max_out);
         pts.push_back(QPointF(m, m));
     }
+    for (QPointF& pt : pts)
+        pt.setY(pt.y() * sensitivity);
 
     QList<QPointF> ret;
     QPointF prev(0, 0);
@@ -572,7 +584,8 @@ void setup_wizard::build_presets(bool rotation)
     cl->addLayout(ticks);
     preview[k] = new curve_preview(card);
     cl->addWidget(preview[k], 1);
-    preset_note[k] = label(rotation ? tr("Shown: yaw. Pitch and roll get the same curve, cut off at their own range.")
+    preset_note[k] = label(rotation ? tr("Shown: yaw. Pitch gets 60% of it (looking up and down needs less), roll the "
+                                         "same; each is cut off at its own range.")
                                     : tr("Shown: left/right. Up/down and forward/back get the same curve."), "wizardMuted");
     cl->addWidget(preset_note[k]);
     l->addWidget(card, 1);
@@ -1063,7 +1076,8 @@ void setup_wizard::detect_curves(bool rotation)
             for (int a = lo; a <= hi && all; a++)
             {
                 const axis_opts& o = *main.all_axis_opts[a];
-                const QList<QPointF> want = fit_curve(presets()[i], deadzones()[j], o.max_clamp_x(), o.max_clamp_y());
+                const QList<QPointF> want = fit_curve(presets()[i], deadzones()[j], o.max_clamp_x(), o.max_clamp_y(),
+                                                      axis_sensitivity(a));
                 const QList<QPointF> have = **curves[a].points;
                 all = have.size() == want.size();
                 for (int q = 0; all && q < have.size(); q++)
@@ -1089,7 +1103,8 @@ void setup_wizard::apply_curves(bool rotation)
     {
         const axis_opts& o = *main.all_axis_opts[a];
         // live: the running mapping follows these values straight away
-        *curves[a].points = fit_curve(presets()[sel_preset[k]], deadzones()[sel_dz[k]], o.max_clamp_x(), o.max_clamp_y());
+        *curves[a].points = fit_curve(presets()[sel_preset[k]], deadzones()[sel_dz[k]], o.max_clamp_x(), o.max_clamp_y(),
+                                      axis_sensitivity(a));
     }
     presets_dirty[k] = true;
     refresh_curve_views(rotation);
@@ -1103,7 +1118,8 @@ void setup_wizard::refresh_curve_views(bool rotation)
     const QString unit = rotation ? tr("degrees") : tr("cm");
     QList<QPointF> shown = **curves[lo].points;
     if (sel_preset[k] >= 0)
-        shown = fit_curve(presets()[sel_preset[k]], deadzones()[sel_dz[k]], o.max_clamp_x(), o.max_clamp_y());
+        shown = fit_curve(presets()[sel_preset[k]], deadzones()[sel_dz[k]], o.max_clamp_x(), o.max_clamp_y(),
+                          axis_sensitivity(lo));
     if (preset_name[k])
         preset_name[k]->setText(sel_preset[k] >= 0 ? tr(presets()[sel_preset[k]].name)
                                                    : tr("Your own curves (unchanged unless you move the slider)"));
@@ -1151,6 +1167,25 @@ void setup_wizard::snapshot(const QString& dir)
         QApplication::processEvents();
         grab().save(QDir(dir).filePath(name + ".png"));
     };
+    // every preset and deadzone as fitted to each axis, for checking the numbers
+    if (QFile f(QDir(dir).filePath("curves.txt")); f.open(QFile::WriteOnly | QFile::Text))
+    {
+        QTextStream out(&f);
+        static const char* const names[] = { "X", "Y", "Z", "yaw", "pitch", "roll" };
+        for (const preset& p : presets())
+            for (const deadzone& dz : deadzones())
+            {
+                out << p.name << " / " << dz.name << "\n";
+                for (int a = 0; a < 6; a++)
+                {
+                    const axis_opts& o = *main.all_axis_opts[a];
+                    out << "  " << names[a] << ":";
+                    for (const QPointF& pt : fit_curve(p, dz, o.max_clamp_x(), o.max_clamp_y(), axis_sensitivity(a)))
+                        out << " (" << pt.x() << ", " << pt.y() << ")";
+                    out << "\n";
+                }
+            }
+    }
     const auto keep = h;
     h.start_tracking = {};                       // screenshots only: don't touch the sensor
     h.show_test_window = {};

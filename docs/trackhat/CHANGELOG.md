@@ -6,7 +6,8 @@ Trackhat features are carried over, with upstream's improvements since then.
 ## What you'll notice
 - **First-run setup wizard**: sensor placement, head center calibration, center/pause hotkeys, and turning/moving
   curve presets (1:1, Mild, Medium, Strong) tried live in the test window, and a deadzone that eases the view in
-  near the center (None, Small, Medium, Large). Run it again from Options > Setup wizard.
+  near the center (None, Small, Medium, Large). Pitch is 60% as sensitive as yaw in every preset. Run it again
+  from Options > Setup wizard.
 - New defaults: X axis and roll inverted (moved the wrong way with the sensor); smoother filter (Accela smoothing
   2.15 deg / 1.3 mm, deadzone 0.17 deg / 0.85 mm).
 - **"starting..."** is shown from the Start click until tracking is going, and the window no longer freezes while
