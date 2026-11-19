@@ -53,8 +53,13 @@ The branch was merged (real 3-way merge, history preserved) into the 2026.1.0 re
   names are macros in `<windows.h>`). Numeric values are unchanged, so saved profiles stay valid.
 - ps3eye submodule and MSVC `sdk-paths-*` files use upstream's versions (not used by the TrackHat build).
 - `todo.md` and the personal todo commits were not carried over.
-- **Default X invert (2026-11-19)**: `spline/axis-opts.cpp` defaults `x-invert-sign` to true; with the TrackHat
-  sensor, X moved the wrong way in the owner's test (the tracker maps image right to +X, as upstream does).
+- **Default X and roll invert (2026-11-19)**: `spline/axis-opts.cpp` defaults `x-invert-sign` and
+  `roll-invert-sign` to true; with the TrackHat sensor both moved the wrong way in the owner's tests (the tracker maps
+  image right to +X, as upstream does; old Trackhat 3.2 profiles had `roll-invert-sign-post`).
+- **"starting..." and camera opening off the UI thread (2026-11-19)**: `api/plugin-api.hpp` gains
+  `ITracker::is_starting()` (default false). `tracker-neuralnet` no longer opens the camera in `start_tracker()`
+  (only checks one exists) but in `run()`, and reports starting until a frame comes without the start-up exposure
+  wait. `main-window.cpp` / `pose-widget` show the `state_starting` banner meanwhile. Upstream blocks the UI.
 - **Accela defaults (2026-11-19)**: smoothing 2.15 deg / 1.3 mm, deadzone 0.17 deg / 0.85 mm
   (`filter-accela/accela-settings.hpp`; upstream 1.5 / 1.0 / 0.03 / 0.1).
 - **First-run setup wizard (2026-11-18)**: Trackhat-only, `opentrack/setup-wizard.*` and `gui/key-capture.*`;

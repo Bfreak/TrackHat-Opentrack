@@ -111,10 +111,20 @@ the head center calibration, hotkey capture from the wizard, and the presets cha
 `trackhat-setup-wizard-done=true`, because the earlier clean-ups ran inside the Claude desktop app's virtualised
 registry (see `GITHUB-AND-ENVIRONMENT.md`). Real keys removed (backup in `cleanup-backup-2026-11-19-real`),
 5e36957 reinstalled, and the wizard checked to open when started from the Start menu shortcut through Explorer.
+2026-11-19, owner's second test: roll inverted by default (like X); presets are straight lines, and the deadzone
+step became a "gentle start" (None/Small/Medium/Large ease-in point, `SETUP-WIZARD.md`). Pages checked with snapshots.
+
+## "starting..." while tracking starts - DONE 2026-11-19
+The pose preview shows "starting" with dots appearing one by one (0.4 s each) from the Start click until the tracker
+is going. The neural-net tracker now opens the camera on its own thread, so the UI no longer freezes for it: Start
+returns after ~0.6 s (model loading) instead of ~4 s. "Going" = a frame arrives without waiting for the start-up
+exposure writes (`ITracker::is_starting()`, a Trackhat addition). Measured with the sensor (UI self-test with
+`_START`, `start.txt`): ~6.7 s from click to going. With no camera at all Start still fails at once ("Couldn't open
+the camera"); a camera that can't be opened yet (busy) is retried every second and "starting..." stays up meanwhile.
 
 ## Known rough edges (noticed, not fixed)
-- Start still takes ~4 s with the sensor (measured 2026-11-18, timing marks in the app): camera open ~1 s, then the
-  exposure controls. `set_exposure()` writes ~10 UVC controls at ~0.1 s each (~1.5-1.9 s a round) and `writes = 3`
+- Start still takes ~4 s with the sensor (measured 2026-11-18, timing marks in the app; ~6.7 s to the first full-speed
+  frame measured 2026-11-19, now shown as "starting..."): camera open ~1 s, then the exposure controls. `set_exposure()` writes ~10 UVC controls at ~0.1 s each (~1.5-1.9 s a round) and `writes = 3`
   (Stanislaw Halik, 2024, "try harder to set exposure on startup") repeats the round on the first three frames, so the
   first frames after Start also stall. Fewer rounds would be faster, but nobody has checked whether the sensor then
   keeps its exposure; test on the sensor before changing it.

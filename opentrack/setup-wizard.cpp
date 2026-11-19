@@ -130,36 +130,40 @@ private:
 
 const std::array<setup_wizard::preset, 4>& setup_wizard::presets()
 {
-    // Curves supplied by the owner (2026-11-18), measured from his Mapping window screenshots. The small
-    // first point of each was dropped on 2026-11-19 so they start straight from 0; deadzones are step 6.
+    // End points of the owner's curves (2026-11-18, from his Mapping window screenshots). Since 2026-11-19
+    // (owner's second test) the presets are straight lines from 0 to that point; the gentle start is step 6.
     static const std::array<preset, 4> ret {{
         { QT_TR_NOOP("1:1"),    {} },
-        { QT_TR_NOOP("Mild"),   { { 25, 31.5 }, { 100, 180 } } },
-        { QT_TR_NOOP("Medium"), { { 21, 35 }, { 63.5, 180 } } },
-        { QT_TR_NOOP("Strong"), { { 15.5, 39.5 }, { 40.5, 180 } } },
+        { QT_TR_NOOP("Mild"),   { { 100, 180 } } },
+        { QT_TR_NOOP("Medium"), { { 63.5, 180 } } },
+        { QT_TR_NOOP("Strong"), { { 40.5, 180 } } },
     }};
     return ret;
 }
 
-const std::array<int, 4>& setup_wizard::deadzones()
+const std::array<setup_wizard::deadzone, 4>& setup_wizard::deadzones()
 {
-    static const std::array<int, 4> ret { 0, 10, 20, 30 };
+    // Not a dead spot: a point below the straight line, so the curve eases in near the center (opentrack's
+    // spline rounds it off) and then follows the preset. Small and Medium match the owner's example curves
+    // (2026-11-19: (13, 24) and (20.5, 27) on a line to (75, 180)).
+    static const std::array<deadzone, 4> ret {{
+        { QT_TR_NOOP("None"),   0,   1   },
+        { QT_TR_NOOP("Small"),  .15, .75 },
+        { QT_TR_NOOP("Medium"), .25, .55 },
+        { QT_TR_NOOP("Large"),  .35, .40 },
+    }};
     return ret;
 }
 
-QList<QPointF> setup_wizard::fit_curve(const preset& p, int deadzone_percent, double max_in, double max_out)
+QList<QPointF> setup_wizard::fit_curve(const preset& p, const deadzone& dz, double max_in, double max_out)
 {
     std::vector<QPointF> pts = p.points;
-    // the deadzone is a percentage of the preset's bend (its first point); 1:1 has none, so 20 deg / cm
-    const double bend = pts.empty() ? 20 : pts.front().x();
     if (pts.empty())
     {
         // 1:1 up to the end of the axis range
         const double m = std::min(max_in, max_out);
         pts.push_back(QPointF(m, m));
     }
-    if (deadzone_percent > 0)
-        pts.insert(pts.begin(), QPointF(std::round(bend * deadzone_percent / 10.) / 10, 0));
 
     QList<QPointF> ret;
     QPointF prev(0, 0);
@@ -178,6 +182,12 @@ QList<QPointF> setup_wizard::fit_curve(const preset& p, int deadzone_percent, do
         const QPointF end(prev.x() + t * (pt.x() - prev.x()), prev.y() + t * (pt.y() - prev.y()));
         ret.push_back(QPointF(std::round(end.x() * 10) / 10, std::round(end.y() * 10) / 10));
         break;
+    }
+    // the gentle start: a point under the straight line to the (fitted) end, a share of the way along it
+    if (dz.x > 0 && !ret.isEmpty())
+    {
+        const QPointF e = ret.front();
+        ret.push_front(QPointF(std::round(e.x() * dz.x * 10) / 10, std::round(e.y() * dz.x * dz.y * 10) / 10));
     }
     return ret;
 }
@@ -585,9 +595,10 @@ void setup_wizard::build_deadzone()
     auto* l = new QVBoxLayout(w);
     l->setSpacing(9);
     l->addWidget(label(tr("Deadzones"), "wizardHeading"));
-    l->addWidget(label(tr("A deadzone is a small area around the center where head movement doesn't move the game "
-                          "view, so the view stays still while your eyes look around the screen. "
-                          "<b>Most people prefer a small deadzone on both.</b>")));
+    l->addWidget(label(tr("The deadzone sets how gently the view starts to follow your head near the center. "
+                          "With none, the view follows straight away; with more, small head movements move it "
+                          "less and it builds up smoothly to your preset, so the view stays steady while your eyes "
+                          "look around the screen. <b>Most people prefer a small deadzone on both.</b>")));
     l->addWidget(label(tr("Hold your head still and look around the screen, then make small head movements, and "
                           "compare in the test window."), "wizardMuted"));
 
@@ -615,7 +626,7 @@ void setup_wizard::build_deadzone()
         for (int i = 0; i < int(deadzones().size()); i++)
         {
             const bool first = i == 0, last = i == int(deadzones().size()) - 1;
-            auto* t = new QLabel(i == 0 ? tr("None") : QStringLiteral("%1%").arg(deadzones()[i]));
+            auto* t = new QLabel(tr(deadzones()[i].name));
             t->setObjectName("wizardMuted");
             t->setAlignment(first ? Qt::AlignLeft : last ? Qt::AlignRight : Qt::AlignHCenter);
             ticks->addWidget(t, first || last ? 1 : 2);
@@ -633,8 +644,8 @@ void setup_wizard::build_deadzone()
             apply_curves(rotation);
         });
     }
-    l->addWidget(label(tr("The deadzone is a share of where the curve bends, so it suits the preset you picked. "
-                          "You can change it later in <b>Mapping</b>."), "wizardMuted"));
+    l->addWidget(label(tr("The deadzone scales with the preset you picked. You can fine-tune it later in "
+                          "<b>Mapping</b> by dragging the first point of a curve."), "wizardMuted"));
     refresh_curve_views(true);
     refresh_curve_views(false);
     pages->addWidget(w);
@@ -675,7 +686,7 @@ void setup_wizard::go_to(int p)
             apply_curves(k == 1);
         }
     }
-    // the deadzone step starts on 10% (small) unless the profile already had one of ours
+    // the deadzone step starts on Small unless the profile already had one of ours
     if (p == p_deadzone)
         for (int k : { 1, 0 })
             if (sel_preset[k] >= 0 && !dz_known[k])
@@ -1064,7 +1075,8 @@ void setup_wizard::detect_curves(bool rotation)
                 return;
             }
         }
-    sel_preset[k] = -1; sel_dz[k] = 0; dz_known[k] = true; own_empty[k] = false;   // the user's own: left alone
+    // the user's own: left alone (if a preset is picked instead, its deadzone starts on Small like a new profile)
+    sel_preset[k] = -1; sel_dz[k] = 0; dz_known[k] = false; own_empty[k] = false;
 }
 
 void setup_wizard::apply_curves(bool rotation)
@@ -1100,8 +1112,8 @@ void setup_wizard::refresh_curve_views(bool rotation)
     if (dz_name[k])
     {
         dz_name[k]->setText(sel_preset[k] < 0 ? tr("Your own curves: left as they are")
-                            : sel_dz[k] == 0 ? tr("No deadzone")
-                            : tr("%1% deadzone").arg(deadzones()[sel_dz[k]]));
+                            : sel_dz[k] == 0 ? tr("No deadzone (straight line)")
+                            : tr("%1 deadzone").arg(tr(deadzones()[sel_dz[k]].name)));
         dz_slider[k]->setEnabled(sel_preset[k] >= 0);
     }
     if (dz_preview[k])
@@ -1163,7 +1175,8 @@ void setup_wizard::snapshot(const QString& dir)
     for (int i : { 1, 2, 3 }) { preset_slider[0]->setValue(i); save(QStringLiteral("wizard-5-position-preset%1").arg(i)); }
     preset_slider[0]->setValue(2);
     go_to(p_deadzone);     save("wizard-6-deadzone-initial");
-    dz_slider[1]->setValue(3); dz_slider[0]->setValue(0); save("wizard-6-deadzone-30-none");
+    dz_slider[1]->setValue(3); dz_slider[0]->setValue(0); save("wizard-6-deadzone-large-none");
+    dz_slider[1]->setValue(2); dz_slider[0]->setValue(1); save("wizard-6-deadzone-medium-small");
     revert_presets(true);
     revert_presets(false);
     h = keep;

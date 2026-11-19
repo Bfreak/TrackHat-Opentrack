@@ -33,10 +33,11 @@ using namespace euler;
 // - running: the reticle's markers are green and circle the ring once every 8 seconds
 // - paused:  the markers stop and turn red
 // - stopped: no head, just "tracking stopped" in the brand font
+// - starting: like stopped, "starting" with dots appearing one by one (Start pressed, tracker not going yet)
 struct OTR_POSE_WIDGET_EXPORT pose_widget final : QWidget
 {
 public:
-    enum tracking_state { state_stopped, state_running, state_paused };
+    enum tracking_state { state_stopped, state_running, state_paused, state_starting };
 
     explicit pose_widget(QWidget *parent = nullptr);
     void present(double xAngle, double yAngle, double zAngle, double x, double y, double z);
@@ -48,7 +49,7 @@ private:
     void paintEvent(QPaintEvent*) override;
     void build_head();
     void draw_grid(QPainter& p) const;
-    void draw_stopped(QPainter& p) const;
+    void draw_banner(QPainter& p, const QString& text, int dots) const;
     void draw_reticle(QPainter& p, QPointF centre, float radius) const;
 
     Pose_ R, T;

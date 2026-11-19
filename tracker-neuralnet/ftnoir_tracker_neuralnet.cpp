@@ -571,8 +571,12 @@ module_status NeuralNetTracker::start_tracker(QFrame* videoframe)
     if (!load_and_initialize_model())
         return error("Couldn't initialize the model.");
 
-    if (!open_camera())
+    // Trackhat: the camera is opened by run(), on the tracker thread, so the UI stays responsive (and shows
+    // "starting...") meanwhile. With no camera at all, fail here as before; a camera that can't be opened yet
+    // (busy, just plugged in) is retried every second by run().
+    if (video::camera_names().empty())
         return error("Couldn't open the camera.");
+    starting_ = true;
 
     videoframe->show();
     video_widget_ = std::make_unique<cv_video_widget>(videoframe);
@@ -707,6 +711,10 @@ void NeuralNetTracker::run()
                 qDebug() << "Can't handle" << img.channels << "color channels";
                 return;
             }
+
+            // started once a frame comes without a wait for the camera's start-up exposure writes
+            if (starting_.load(std::memory_order_relaxed) && clk.now() - t < std::chrono::milliseconds(200))
+                starting_ = false;
 
             {
                 QMutexLocker lck{ &stats_mtx_ };

@@ -31,9 +31,10 @@ axis_opts::axis_opts(QString pfx, Axis idx) :
     axis_(idx),
     zero(b_settings_window, n(pfx, "zero-pos"), 0),
     src(b_settings_window, n(pfx, "source-index"), idx),
-    // Trackhat: X is inverted by default; with the TrackHat sensor the tracker's +X is the user's left
-    // (owner's test, 2026-11-19). Options > Output can still change it.
-    invert_pre(b_settings_window, n(pfx, "invert-sign"), idx == TX),
+    // Trackhat: X and roll are inverted by default; with the TrackHat sensor they came out the wrong way round
+    // (owner's tests, 2026-11-19; old Trackhat 3.2 profiles also had roll inverted). Options > Output can
+    // still change them.
+    invert_pre(b_settings_window, n(pfx, "invert-sign"), idx == TX || idx == Roll),
     invert_post(b_settings_window, n(pfx, "invert-sign-post"), false),
     altp(b_mapping_window, n(pfx, "alt-axis-sign"), false),
     clamp_x_(b_mapping_window, n(pfx, "max-value"), get_max_x(idx)),

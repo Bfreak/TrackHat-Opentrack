@@ -30,8 +30,9 @@ images `gui/images/setup-sensor-{top,bottom}.png`, styles at the end of `gui/the
    Next saves them, closing the wizard puts them back. A profile without curves starts on 1:1 and gets it written
    (opentrack's empty X/Y/Z curve is 30 -> 75 cm, not 1:1). A profile with its own curves shows "Your own curves"
    and is left alone unless the slider is moved.
-6. **Deadzones**: two sliders, turning and moving: none, 10%, 20%, 30% of the preset's bend (its first point;
-   20 deg/cm for 1:1), as a first point (deadzone, 0) on every curve of the group. Starts on 10%. Finish saves.
+6. **Deadzones**: two sliders, turning and moving: None, Small, Medium, Large. In the owner's sense (2026-11-19):
+   not a dead spot but how gently the curve starts. It adds one point under the straight preset line; opentrack's
+   spline rounds it off into an ease-in (see "Deadzone" below). Starts on Small. Finish saves.
 
 Window: fixed 900x800, 11pt text (22pt title). Owned by the main window (always in front of it) and placed once,
 right beside the main window on its screen; after that it stays where the user puts it. (Placed at the far left of
@@ -44,20 +45,37 @@ wizard. When testing from Claude Code in the desktop app, see "Registry is virtu
 the 2026-11-19 "wizard doesn't open after a clean install" reports were the real registry still having the flag.
 
 ## Presets
-The owner's curves (2026-11-18), read off his Mapping screenshots (input -> output):
+Straight lines from 0 to the end point of the owner's curves (2026-11-18, read off his Mapping screenshots,
+input -> output):
 
 | Preset | Points |
 |---|---|
 | 1:1 | straight line to the end of the axis range |
-| Mild | (25, 31.5) (100, 180) |
-| Medium | (21, 35) (63.5, 180) |
-| Strong | (15.5, 39.5) (40.5, 180) |
+| Mild | (100, 180) |
+| Medium | (63.5, 180) |
+| Strong | (40.5, 180) |
 
-The owner's screenshots also had a small first point ((1.5, 1.5), (3, 4.5), (1.25, 2.75)); it was dropped on 2026-11-19
-so the presets start straight from 0, and deadzones moved to step 6.
+History: the screenshots had two more points under the line ((1.5, 1.5) / (25, 31.5) for Mild, (3, 4.5) / (21, 35)
+Medium, (1.25, 2.75) / (15.5, 39.5) Strong). The first went on 2026-11-19 (first test), the second after the owner's
+second test the same day: "the presets should be linear, the deadzone step chooses how smooth the start is".
 
-`setup_wizard::fit_curve()` adds the deadzone and fits them to each axis without changing the outputs below the limits: points past the
-axis' max input or max output are replaced by the point where the curve (straight-line estimate) reaches the limit.
+## Deadzone (gentle start)
+One point at `x * end input`, with `y *` the straight line's output there (`setup_wizard::deadzones()`):
+
+| Level | x | y |
+|---|---|---|
+| None | - | - (straight line) |
+| Small | 0.15 | 0.75 |
+| Medium | 0.25 | 0.55 |
+| Large | 0.35 | 0.40 |
+
+Small and Medium match the owner's example curves on a line to (75, 180): (13, 24) and (20.5, 27). It scales with the
+preset (Strong's ease-in is short, 1:1's long) and with each axis' fitted end. A profile's curves are recognised as
+"preset + level" when re-running the wizard.
+
+`setup_wizard::fit_curve()` fits the preset to each axis without changing the outputs below the limits: a point past
+the axis' max input or max output is replaced by the point where the line reaches the limit. Then the deadzone point
+is added relative to that end.
 - Yaw, roll (180 in / 180 out): as listed.
 - Pitch (90 / 90): same curve, ending at 90 deg out.
 - X, Y, Z (30 cm in / 75 cm out): the same numbers read as cm (owner's choice), ending at 30 cm in or 75 cm out.

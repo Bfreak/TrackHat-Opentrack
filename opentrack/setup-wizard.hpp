@@ -50,12 +50,16 @@ public:
     // Development aid: saves every page (and the calibration states) as PNGs into `dir`.
     void snapshot(const QString& dir);
 
-    // A curve preset: points on the 0..180 deg (or cm) scale of the owner's curves. Empty = 1:1.
+    // A curve preset: a straight line from 0 to its end point, on the 0..180 deg (or cm) scale of the owner's
+    // curves. Empty = 1:1.
     struct preset { const char* name; std::vector<QPointF> points; };
     static const std::array<preset, 4>& presets();
-    static const std::array<int, 4>& deadzones();       // percent of the preset's bend
+    // The "deadzone" (owner's word): how gently the curve starts. A point at x * the end's input, with y * the
+    // straight line's output there. x = 0: none, the curve stays straight.
+    struct deadzone { const char* name; double x, y; };
+    static const std::array<deadzone, 4>& deadzones();
     // The preset with a deadzone, fitted to an axis: cut at max_in, capped at max_out (outputs unchanged below).
-    static QList<QPointF> fit_curve(const preset& p, int deadzone_percent, double max_in, double max_out);
+    static QList<QPointF> fit_curve(const preset& p, const deadzone& dz, double max_in, double max_out);
 
 signals:
     void wizard_closed();

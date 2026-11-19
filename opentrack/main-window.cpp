@@ -40,6 +40,7 @@
 #include <QTextStream>
 #include <QDir>
 #include <QDateTime>
+#include <QElapsedTimer>
 
 
 #ifdef __APPLE__
@@ -145,10 +146,38 @@ main_window::main_window() : State(OPENTRACK_BASE_PATH + OPENTRACK_LIBRARY_PATH)
                 QTimer::singleShot(35000, this, [shoot, finish] { shoot("swap-2-back"); (*finish)(); });
             };
         }
-        QTimer::singleShot(500, this, [this, swap_steps] {
-            // OPENTRACK_UI_SNAPSHOT_START=1 also starts tracking for a few seconds (needs the camera)
-            if (qEnvironmentVariableIsSet("OPENTRACK_UI_SNAPSHOT_START"))
+        const bool start_test = qEnvironmentVariableIsSet("OPENTRACK_UI_SNAPSHOT_START");
+        QTimer::singleShot(500, this, [this, swap_steps, start_test, dir] {
+            // OPENTRACK_UI_SNAPSHOT_START=1 also starts tracking for a few seconds (needs the camera), saves the
+            // main window while it starts (starting-*.png) and how long Start took (start.txt)
+            if (start_test)
+            {
+                auto t = std::make_shared<QElapsedTimer>();
+                t->start();
                 start_tracker_();
+                const qint64 returned = t->elapsed();
+                auto* poll = new QTimer(this);
+                auto shots = std::make_shared<int>(0);
+                auto last_shot = std::make_shared<qint64>(-1000);
+                connect(poll, &QTimer::timeout, this, [this, poll, t, returned, dir, shots, last_shot] {
+                    QDir().mkpath(dir);
+                    const bool starting = work && work->libs.pTracker->is_starting();
+                    if (starting && t->elapsed() - *last_shot >= 500 && *shots < 4)
+                    {
+                        *last_shot = t->elapsed();
+                        grab().save(QDir(dir).filePath(QStringLiteral("starting-%1.png").arg(++*shots)));
+                        ui.pose_display->grab().save(QDir(dir).filePath(QStringLiteral("starting-head-%1.png").arg(*shots)));
+                    }
+                    if (!starting || t->elapsed() > 20000)
+                    {
+                        poll->stop();
+                        if (QFile f(QDir(dir).filePath("start.txt")); f.open(QFile::WriteOnly | QFile::Text))
+                            QTextStream(&f) << "start_tracker_ returned after " << returned << " ms; tracker going after "
+                                            << t->elapsed() << " ms" << (starting ? " (still starting: gave up)" : "") << "\n";
+                    }
+                });
+                poll->start(50);
+            }
             show_options_dialog(true);
             show_mapping_window();
             show_head_test_window();
@@ -156,7 +185,7 @@ main_window::main_window() : State(OPENTRACK_BASE_PATH + OPENTRACK_LIBRARY_PATH)
                 swap_steps();
         });
         if (!swap_test)
-            QTimer::singleShot(3500, this, [finish] { (*finish)(); });
+            QTimer::singleShot(start_test ? 10000 : 3500, this, [finish] { (*finish)(); });
         *finish = [this, dir] {
             QDir().mkpath(dir);
             auto save = [&](QWidget* w, const char* name) {
@@ -208,6 +237,7 @@ main_window::main_window() : State(OPENTRACK_BASE_PATH + OPENTRACK_LIBRARY_PATH)
                     { "up",      pw::state_running,  20,  40,   0, 0, 0,   0 },
                     { "paused",  pw::state_paused,   25,  -8,   4, 0, 0,   0 },
                     { "stopped", pw::state_stopped,   0,   0,   0, 0, 0,   0 },
+                    { "starting", pw::state_starting, 0,   0,   0, 0, 0,   0 },
                 };
                 pose_widget big;
                 big.setAttribute(Qt::WA_DontShowOnScreen);
@@ -666,11 +696,16 @@ void main_window::start_tracker_()
 #else
     auto* frame = &fake_video_frame;
 #endif
+    // Trackhat: "starting..." from the moment Start is pressed until the tracker is going (show_pose())
+    ui.pose_display->set_tracking_state(pose_widget::state_starting);
+    ui.pose_display->repaint();
+
     work = std::make_shared<Work>(pose, frame, current_tracker(), enabled_protocols(), current_filter());
 
     if (!work->is_ok())
     {
         work = nullptr;
+        ui.pose_display->set_tracking_state(pose_widget::state_stopped);
         return;
     }
 
@@ -703,7 +738,8 @@ void main_window::start_tracker_()
         options_widget->refresh_protocol_status();
     }
 
-    ui.pose_display->set_tracking_state(pose_widget::state_running);
+    ui.pose_display->set_tracking_state(work->libs.pTracker->is_starting() ? pose_widget::state_starting
+                                                                            : pose_widget::state_running);
 
     pose_update_timer.start(15);
 
@@ -813,6 +849,11 @@ void main_window::show_pose()
     if (mapping_widget)
         mapping_widget->refresh_tab();
 
+    // the state first, so it's right whenever the window shows again
+    ui.pose_display->set_tracking_state(work->libs.pTracker->is_starting() ? pose_widget::state_starting
+                                        : work->pipeline_.is_enabled() ? pose_widget::state_running
+                                                                       : pose_widget::state_paused);
+
     if (!check_is_visible())
         return;
 
@@ -820,8 +861,6 @@ void main_window::show_pose()
 
     work->pipeline_.raw_and_mapped_pose(mapped, raw);
 
-    ui.pose_display->set_tracking_state(work->pipeline_.is_enabled() ? pose_widget::state_running
-                                                                     : pose_widget::state_paused);
     show_pose_(mapped, raw);
 }
 

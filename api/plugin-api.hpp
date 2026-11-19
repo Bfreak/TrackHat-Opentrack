@@ -203,6 +203,9 @@ struct OTR_API_EXPORT ITracker
     // tracker notified of centering
     // returning true makes identity the center pose
     virtual bool center();
+    // Trackhat: true while the tracker is still getting going after start_tracker() returned (camera opening,
+    // first frames); the main window shows "starting..." meanwhile
+    virtual bool is_starting() const { return false; }
 
     static module_status status_ok();
     static module_status error(const QString& error);

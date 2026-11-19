@@ -60,7 +60,8 @@ and hand back something runnable. Prefer finished, tested artifacts over explana
 - To check any UI change, run with `OPENTRACK_UI_SNAPSHOT=<dir>` (add `OPENTRACK_UI_SNAPSHOT_START=1` to start
   tracking for 3 s with the sensor) and look at the PNGs. You can't see the app otherwise.
   `OPENTRACK_UI_SNAPSHOT_SWAP_CAMERA=<name part>` also switches the camera while tracking. `qDebug` output is not
-  visible in this build; `start_tracker_()` blocks the UI for ~8 s while the sensor opens, so schedule test steps after it.
+  visible in this build. `start_tracker_()` blocks ~0.6 s (model load); the camera then opens on the tracker thread and
+  `ITracker::is_starting()` stays true for ~6-7 s, so schedule test steps after that (`_START` writes `start.txt`).
 - The local build has no vJoy and no OSC; a change that touches them needs a CI run.
 - **HKCU is virtualised for processes Claude starts** (the desktop app is MSIX-packaged): registry reads/deletes from a
   Claude shell don't reach the owner's real settings. Use a `.bat` started through Explorer for real registry work and

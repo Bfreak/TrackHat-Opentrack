@@ -240,7 +240,7 @@ void pose_widget::set_tracking_state(tracking_state s)
 {
     if (state == s)
         return;
-    if (state == state_stopped)
+    if (state == state_stopped || state == state_starting)
         reticle_valid = false;
     state = s;
     update();
@@ -362,15 +362,17 @@ static QString brand_font_family()
     return family;
 }
 
-void pose_widget::draw_stopped(QPainter& p) const
+// `text` in the brand font across the middle; dots >= 0 adds that many of three dots after it, keeping the
+// text where it would be with all three (so it doesn't shift as they appear).
+void pose_widget::draw_banner(QPainter& p, const QString& text, int dots) const
 {
-    const QString text = QStringLiteral("tracking stopped"); // lower case = the font's wide small caps
+    const QString full = dots >= 0 ? text + QStringLiteral("...") : text;
     QFont f(brand_font_family());
     f.setPixelSize(24);
-    // fit to about three quarters of the width
-    const qreal tw = QFontMetricsF(f).horizontalAdvance(text);
-    if (tw > 0)
-        f.setPixelSize(std::max(10, int(24 * width() * .76 / tw)));
+    // "tracking stopped" fits about three quarters of the width; other text gets the same size
+    const qreal ref = QFontMetricsF(f).horizontalAdvance(QStringLiteral("tracking stopped"));
+    if (ref > 0)
+        f.setPixelSize(std::max(10, int(24 * width() * .76 / ref)));
     p.save();
     p.setRenderHint(QPainter::Antialiasing, true);
     p.setRenderHint(QPainter::TextAntialiasing, true);
@@ -385,7 +387,14 @@ void pose_widget::draw_stopped(QPainter& p) const
     band.setColorAt(1, QColor(9, 9, 13, 0));
     p.fillRect(r.adjusted(0, -fm.height() * .45, 0, fm.height() * .45), band);
     p.setPen(QColor(196, 181, 253));
-    p.drawText(r, Qt::AlignCenter, text);
+    if (dots < 0)
+        p.drawText(r, Qt::AlignCenter, text);
+    else
+    {
+        const qreal left = (width() - fm.horizontalAdvance(full)) * .5;
+        p.drawText(QRectF(left, r.top(), width() - left, r.height()), Qt::AlignLeft | Qt::AlignVCenter,
+                   text + QString(std::clamp(dots, 0, 3), QLatin1Char('.')));
+    }
     p.restore();
 }
 
@@ -433,7 +442,13 @@ void pose_widget::paintEvent(QPaintEvent*)
 
     if (state == state_stopped)
     {
-        draw_stopped(p);
+        draw_banner(p, QStringLiteral("tracking stopped"), -1); // lower case = the font's wide small caps
+        return;
+    }
+    if (state == state_starting)
+    {
+        // a dot every 0.4 s, then start again: "starting", "starting.", "starting..", "starting..."
+        draw_banner(p, QStringLiteral("starting"), int(now / 400'000'000) % 4);
         return;
     }
     if (state == state_running)

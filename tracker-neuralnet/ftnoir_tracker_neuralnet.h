@@ -29,6 +29,7 @@
 #include <QTimer>
 
 #include <array>
+#include <atomic>
 #include <cinttypes>
 #include <limits>
 #include <memory>
@@ -144,6 +145,7 @@ public:
     ~NeuralNetTracker() override;
     module_status start_tracker(QFrame* frame) override;
     void data(double* data) override;
+    bool is_starting() const override { return starting_.load(std::memory_order_relaxed); }
     void run() override;
     Affine pose();
     std::tuple<cv::Size, double, double> stats() const;
@@ -193,6 +195,9 @@ private:
     static constexpr double RC = .25;
     int num_threads_ = 1;
     bool is_visible_ = true;
+    // Trackhat: the camera opens on the tracker thread (it took seconds on the UI thread); true until frames
+    // arrive at full speed (the first few wait for the exposure writes in video-opencv)
+    std::atomic<bool> starting_ = false;
 
     QMutex mtx_ = {}; // Protects the pose
     std::optional<QuatPose> last_pose_ = {};
