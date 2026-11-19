@@ -9,8 +9,10 @@ something runnable.
 
 ## Now: 2026.1 Beta 2 for beta testers (2026-11-20)
 - `trackhat-setup-wizard` merged into `trackhat-2026.1` (fast-forward) and tagged `trackhat-opentrack-2026.1-beta2`.
-- GitHub release "TrackHat opentrack 2026.1 Beta 2" (pre-release) created as a **draft** with the CI installer and
-  portable zip; text = `RELEASE-NOTES-2026.1-beta2.md`. The owner publishes it and sends testers the link.
+- GitHub release "TrackHat opentrack 2026.1 Beta 2" (pre-release) **published 2026-11-19 21:35 UTC** with the CI
+  installer and portable zip (run 44612603344); text = `RELEASE-NOTES-2026.1-beta2.md`. Its "Reporting problems"
+  section doesn't name a contact yet. Link for testers:
+  https://github.com/Bfreak/TrackHat-Opentrack/releases/tag/trackhat-opentrack-2026.1-beta2
 - trackhat.org advertises `trackhat-opentrack-3.2`, so no 2026.1 build shows an update prompt; leave it for the
   beta. Beta 1 builds can't be notified of Beta 2 by the site (same version number); from Beta 2 on they can.
 - The owner has used CI installers of this branch on this Windows 11 PC with the sensor (setup wizard, presets,
